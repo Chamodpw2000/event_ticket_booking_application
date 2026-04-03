@@ -12,10 +12,95 @@ datasource db {
 }
 
 model Event {
-  id          Int      @id @default(autoincrement())
+  id                Int                 @id @default(autoincrement())
+  venueId           Int
   title       String
   description String?
-  date        DateTime
+  category          String?
+  startTime         DateTime
+  endTime           DateTime
+  status            String              @default("draft")
+  bannerUrl         String?
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+
+  eventArtists      EventArtist[]
+  eventTicketTypes  EventTicketType[]
+  eventInventories  EventInventory[]
+  inventoryHolds    InventoryHold[]
+
+  @@index([venueId])
 }
+
+model EventArtist {
+  id        Int      @id @default(autoincrement())
+  eventId   Int
+  artistId  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  event Event @relation(fields: [eventId], references: [id], onDelete: Cascade)
+
+  @@unique([eventId, artistId])
+  @@index([eventId])
+  @@index([artistId])
+}
+
+model EventTicketType {
+  id          Int             @id @default(autoincrement())
+  eventId     Int
+  name        String
+  price       Decimal         @db.Decimal(10, 2)
+  currency    String          @default("USD")
+  description String?
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  event              Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  eventInventories   EventInventory[]
+  inventoryHolds     InventoryHold[]
+
+  @@index([eventId])
+}
+
+model EventInventory {
+  id                Int     @id @default(autoincrement())
+  eventId           Int
+  ticketTypeId      Int
+  totalQuantity     Int
+  availableQuantity Int
+  reservedQuantity  Int     @default(0)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  event            Event            @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketType       EventTicketType  @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+
+  @@unique([eventId, ticketTypeId])
+  @@index([eventId])
+  @@index([ticketTypeId])
+}
+
+model InventoryHold {
+  id           Int      @id @default(autoincrement())
+  eventId      Int
+  ticketTypeId Int
+  bookingId    Int?
+  userId       Int
+  quantity     Int
+  status       String   @default("active")
+  expiresAt    DateTime
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  event        Event           @relation(fields: [eventId], references: [id], onDelete: Cascade)
+  ticketType   EventTicketType @relation(fields: [ticketTypeId], references: [id], onDelete: Cascade)
+
+  @@index([eventId])
+  @@index([ticketTypeId])
+  @@index([bookingId])
+  @@index([userId])
+  @@index([expiresAt])
+}
+

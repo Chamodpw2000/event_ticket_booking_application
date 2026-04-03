@@ -2,6 +2,7 @@ import express from "express";
 import "dotenv/config";
 import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
 import usersRouter from "./routes/usersRoutes.js";
+import userRolesRouter from "./routes/userRolesRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3002;
@@ -17,6 +18,7 @@ app.get("/", (req, res) => {
 });
 
 app.use("/users", usersRouter);
+app.use("/roles", userRolesRouter);
 
 const startServer = async () => {
 	try {
