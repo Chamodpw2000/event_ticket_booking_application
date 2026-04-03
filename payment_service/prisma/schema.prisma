@@ -12,14 +12,58 @@ datasource db {
 }
 
 model Payment {
-  id            Int      @id @default(autoincrement())
-  amount        Float
-  currency      String
-  method        String
-  status        String
-  transactionId String   @unique
-  createdAt     DateTime @default(now())
-  updatedAt     DateTime @updatedAt
+  id                Int                  @id @default(autoincrement())
+  bookingId         Int
+  userId            Int
+  eventId           Int
+  amount            Decimal              @db.Decimal(10, 2)
+  currency          String
+  paymentMethod     String
+  providerName      String
+  providerReference String?
+  status            String
+  createdAt         DateTime             @default(now())
+  updatedAt         DateTime             @updatedAt
 
+  transactions      PaymentTransaction[]
+  refunds           Refund[]
+
+  @@index([bookingId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([status])
+  @@index([providerReference])
+}
+
+model PaymentTransaction {
+  id                Int      @id @default(autoincrement())
+  paymentId         Int
+  transactionType   String
+  providerReference String?
+  status            String
+  responsePayload   Json?
+  createdAt         DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([transactionType])
+  @@index([status])
+  @@index([providerReference])
+}
+
+model Refund {
+  id        Int      @id @default(autoincrement())
+  paymentId Int
+  bookingId Int
+  amount    Decimal  @db.Decimal(10, 2)
+  reason    String?
+  status    String
+  createdAt DateTime @default(now())
+
+  payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
+
+  @@index([paymentId])
+  @@index([bookingId])
   @@index([status])
 }
