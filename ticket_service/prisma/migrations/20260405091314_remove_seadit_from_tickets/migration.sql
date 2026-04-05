@@ -5,4 +5,4 @@
 
 */
 -- AlterTable
-ALTER TABLE `ticket` DROP COLUMN `seat_id`;
+ALTER TABLE `Ticket` DROP COLUMN `seat_id`;

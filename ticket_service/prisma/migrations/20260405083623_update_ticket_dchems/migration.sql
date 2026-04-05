@@ -18,7 +18,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `ticket` DROP COLUMN `createdAt`,
+ALTER TABLE `Ticket` DROP COLUMN `createdAt`,
     DROP COLUMN `eventId`,
     DROP COLUMN `price`,
     DROP COLUMN `quantity`,
@@ -106,19 +106,19 @@ CREATE TABLE `ticket_validation_log` (
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateIndex
-CREATE UNIQUE INDEX `ticket_ticket_code_key` ON `ticket`(`ticket_code`);
+CREATE UNIQUE INDEX `Ticket_ticket_code_key` ON `Ticket`(`ticket_code`);
 
 -- CreateIndex
-CREATE INDEX `ticket_booking_id_idx` ON `ticket`(`booking_id`);
+CREATE INDEX `Ticket_booking_id_idx` ON `Ticket`(`booking_id`);
 
 -- CreateIndex
-CREATE INDEX `ticket_user_id_idx` ON `ticket`(`user_id`);
+CREATE INDEX `Ticket_user_id_idx` ON `Ticket`(`user_id`);
 
 -- CreateIndex
-CREATE INDEX `ticket_event_id_idx` ON `ticket`(`event_id`);
+CREATE INDEX `Ticket_event_id_idx` ON `Ticket`(`event_id`);
 
 -- CreateIndex
-CREATE INDEX `ticket_ticket_type_id_idx` ON `ticket`(`ticket_type_id`);
+CREATE INDEX `Ticket_ticket_type_id_idx` ON `Ticket`(`ticket_type_id`);
 
 -- AddForeignKey
 ALTER TABLE `booking_item` ADD CONSTRAINT `booking_item_booking_id_fkey` FOREIGN KEY (`booking_id`) REFERENCES `booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
@@ -127,10 +127,10 @@ ALTER TABLE `booking_item` ADD CONSTRAINT `booking_item_booking_id_fkey` FOREIGN
 ALTER TABLE `booking_status_history` ADD CONSTRAINT `booking_status_history_booking_id_fkey` FOREIGN KEY (`booking_id`) REFERENCES `booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ticket` ADD CONSTRAINT `ticket_booking_id_fkey` FOREIGN KEY (`booking_id`) REFERENCES `booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `Ticket` ADD CONSTRAINT `Ticket_booking_id_fkey` FOREIGN KEY (`booking_id`) REFERENCES `booking`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ticket_file` ADD CONSTRAINT `ticket_file_ticket_id_fkey` FOREIGN KEY (`ticket_id`) REFERENCES `ticket`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `ticket_file` ADD CONSTRAINT `ticket_file_ticket_id_fkey` FOREIGN KEY (`ticket_id`) REFERENCES `Ticket`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 -- AddForeignKey
-ALTER TABLE `ticket_validation_log` ADD CONSTRAINT `ticket_validation_log_ticket_id_fkey` FOREIGN KEY (`ticket_id`) REFERENCES `ticket`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+ALTER TABLE `ticket_validation_log` ADD CONSTRAINT `ticket_validation_log_ticket_id_fkey` FOREIGN KEY (`ticket_id`) REFERENCES `Ticket`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;

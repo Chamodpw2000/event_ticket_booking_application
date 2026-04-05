@@ -6,16 +6,16 @@
 
 */
 -- DropForeignKey
-ALTER TABLE `userroles` DROP FOREIGN KEY `UserRoles_roleId_fkey`;
+ALTER TABLE `UserRoles` DROP FOREIGN KEY `UserRoles_roleId_fkey`;
 
 -- DropForeignKey
-ALTER TABLE `userroles` DROP FOREIGN KEY `UserRoles_userId_fkey`;
+ALTER TABLE `UserRoles` DROP FOREIGN KEY `UserRoles_userId_fkey`;
 
 -- DropTable
-DROP TABLE `roles`;
+DROP TABLE `Roles`;
 
 -- DropTable
-DROP TABLE `userroles`;
+DROP TABLE `UserRoles`;
 
 -- CreateTable
 CREATE TABLE `Role` (
