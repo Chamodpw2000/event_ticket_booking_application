@@ -11,14 +11,106 @@ datasource db {
   provider = "mysql"
 }
 
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  FAILED
+  CANCELLED
+}
+
+enum TicketStatus {
+  ISSUED
+  USED
+  CANCELLED
+}
+
+model Booking {
+  id               Int                    @id @default(autoincrement())
+  userId           Int                    @map("user_id")
+  eventId          Int                    @map("event_id")
+  bookingReference String                 @unique @map("booking_reference") @db.VarChar(100)
+  status           BookingStatus          @default(PENDING)
+  totalAmount      Decimal                @map("total_amount") @db.Decimal(10, 2)
+  currency         String                 @db.VarChar(3)
+  paymentStatus    String                 @map("payment_status") @db.VarChar(50)
+  createdAt        DateTime               @default(now()) @map("created_at")
+  updatedAt        DateTime               @updatedAt @map("updated_at")
+  items            BookingItem[]
+  statusHistory    BookingStatusHistory[]
+  tickets          Ticket[]
+
+  @@index([userId])
+  @@index([eventId])
+  @@map("booking")
+}
+
+model BookingItem {
+  id           Int      @id @default(autoincrement())
+  bookingId    Int      @map("booking_id")
+  ticketTypeId Int      @map("ticket_type_id")
+  quantity     Int
+  unitPrice    Decimal  @map("unit_price") @db.Decimal(10, 2)
+  subtotal     Decimal  @db.Decimal(10, 2)
+  booking      Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@index([ticketTypeId])
+  @@map("booking_item")
+}
+
+model BookingStatusHistory {
+  id        Int           @id @default(autoincrement())
+  bookingId Int           @map("booking_id")
+  oldStatus BookingStatus @map("old_status")
+  newStatus BookingStatus @map("new_status")
+  changedAt DateTime      @default(now()) @map("changed_at")
+  reason    String?       @db.VarChar(255)
+  booking   Booking       @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  @@index([bookingId])
+  @@map("booking_status_history")
+}
+
 model Ticket {
+  id                  Int                   @id @default(autoincrement())
+  bookingId           Int                   @map("booking_id")
+  userId              Int                   @map("user_id")
+  eventId             Int                   @map("event_id")
+  ticketCode          String                @unique @map("ticket_code") @db.VarChar(120)
+  ticketTypeId        Int                   @map("ticket_type_id")
+  ticketStatus        TicketStatus          @default(ISSUED) @map("ticket_status")
+  issuedAt            DateTime              @default(now()) @map("issued_at")
+  booking             Booking               @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  files               TicketFile[]
+  validationLogs      TicketValidationLog[]
+
+  @@index([bookingId])
+  @@index([userId])
+  @@index([eventId])
+  @@index([ticketTypeId])
+  @@map("ticket")
+}
+
+model TicketFile {
   id        Int      @id @default(autoincrement())
-  eventId   Int
-  userId    Int
-  quantity  Int      @default(1)
-  price     Float
-  totalPrice Float
-  status    String   @default("pending")
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  ticketId  Int      @map("ticket_id")
+  fileType  String   @map("file_type") @db.VarChar(50)
+  s3Url     String   @map("s3_url") @db.VarChar(500)
+  createdAt DateTime @default(now()) @map("created_at")
+  ticket    Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_file")
+}
+
+model TicketValidationLog {
+  id          Int      @id @default(autoincrement())
+  ticketId    Int      @map("ticket_id")
+  validatedAt DateTime @default(now()) @map("validated_at")
+  validatedBy String   @map("validated_by") @db.VarChar(120)
+  result      String   @db.VarChar(60)
+  ticket      Ticket   @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  @@index([ticketId])
+  @@map("ticket_validation_log")
 }
