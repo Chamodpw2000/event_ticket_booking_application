@@ -1,20 +1,20 @@
-/*
-  Warnings:
+-- CreateTable
+CREATE TABLE `Event` (
+    `id` INTEGER NOT NULL AUTO_INCREMENT,
+    `venueId` INTEGER NOT NULL,
+    `title` VARCHAR(191) NOT NULL,
+    `description` VARCHAR(191) NULL,
+    `category` VARCHAR(191) NULL,
+    `startTime` DATETIME(3) NOT NULL,
+    `endTime` DATETIME(3) NOT NULL,
+    `status` VARCHAR(191) NOT NULL DEFAULT 'draft',
+    `bannerUrl` VARCHAR(191) NULL,
+    `createdAt` DATETIME(3) NOT NULL DEFAULT CURRENT_TIMESTAMP(3),
+    `updatedAt` DATETIME(3) NOT NULL,
 
-  - You are about to drop the column `date` on the `event` table. All the data in the column will be lost.
-  - Added the required column `endTime` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `startTime` to the `Event` table without a default value. This is not possible if the table is not empty.
-  - Added the required column `venueId` to the `Event` table without a default value. This is not possible if the table is not empty.
-
-*/
--- AlterTable
-ALTER TABLE `event` DROP COLUMN `date`,
-    ADD COLUMN `bannerUrl` VARCHAR(191) NULL,
-    ADD COLUMN `category` VARCHAR(191) NULL,
-    ADD COLUMN `endTime` DATETIME(3) NOT NULL,
-    ADD COLUMN `startTime` DATETIME(3) NOT NULL,
-    ADD COLUMN `status` VARCHAR(191) NOT NULL DEFAULT 'draft',
-    ADD COLUMN `venueId` INTEGER NOT NULL;
+    INDEX `Event_venueId_idx`(`venueId`),
+    PRIMARY KEY (`id`)
+) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
 
 -- CreateTable
 CREATE TABLE `EventArtist` (
@@ -82,9 +82,6 @@ CREATE TABLE `InventoryHold` (
     INDEX `InventoryHold_expiresAt_idx`(`expiresAt`),
     PRIMARY KEY (`id`)
 ) DEFAULT CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
-
--- CreateIndex
-CREATE INDEX `Event_venueId_idx` ON `Event`(`venueId`);
 
 -- AddForeignKey
 ALTER TABLE `EventArtist` ADD CONSTRAINT `EventArtist_eventId_fkey` FOREIGN KEY (`eventId`) REFERENCES `Event`(`id`) ON DELETE CASCADE ON UPDATE CASCADE;
