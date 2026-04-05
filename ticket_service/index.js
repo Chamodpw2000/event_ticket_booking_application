@@ -2,6 +2,8 @@ import express from "express";
 import "dotenv/config";
 import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
 import ticketsRouter from "./routes/ticketsRoutes.js";
+import bookingsRouter from "./routes/bookingsRoutes.js";
+import bookingItemsRouter from "./routes/bookingItemsRoutes.js";
 
 const app = express();
 const PORT = process.env.PORT || 3003;
@@ -17,6 +19,8 @@ app.get("/", (req, res) => {
 });
 
 app.use("/tickets", ticketsRouter);
+app.use("/bookings", bookingsRouter);
+app.use("/booking-items", bookingItemsRouter);
 
 
 
