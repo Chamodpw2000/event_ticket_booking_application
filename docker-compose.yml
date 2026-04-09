@@ -2,6 +2,17 @@ version: "3.9"
 
 services:
 
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
   mysql:
     image: mysql:8.0
     container_name: mysql
@@ -29,10 +40,10 @@ services:
     ports:
       - "3004:3004"
     environment:
-      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_artist_db"
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_artist_db"
     depends_on:
-      mysql:
-        condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - app-network
 
@@ -85,11 +96,11 @@ services:
     ports:
       - "3002:3002"
     environment:
-      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_user_db"
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_user_db"
       JWT_SECRET: "replace-with-a-strong-secret"
     depends_on:
-      mysql:
-        condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - app-network
 
@@ -100,14 +111,15 @@ services:
     ports:
       - "3005:3005"
     environment:
-      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_venue_db"
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_venue_db"
     depends_on:
-      mysql:
-        condition: service_healthy
+      mongodb:
+        condition: service_started
     networks:
       - app-network
 
 volumes:
+  mongodb_data:
   mysql_data:
 
 networks:

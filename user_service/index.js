@@ -1,6 +1,6 @@
 import express from "express";
 import "dotenv/config";
-import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
+import { connectDatabase, disconnectDatabase } from "./lib/mongoClient.js";
 import usersRouter from "./routes/usersRoutes.js";
 import userRolesRouter from "./routes/userRolesRoutes.js";
 
@@ -23,7 +23,7 @@ app.use("/roles", userRolesRouter);
 const startServer = async () => {
 	try {
 		console.log("Starting user_service...");
-		await connectPrisma();
+		await connectDatabase();
 		console.log("Database connected");
 
 		app.listen(PORT, () => {
@@ -37,7 +37,7 @@ const startServer = async () => {
 
 startServer();
 const shutdown = async () => {
-    await disconnectPrisma();
+	await disconnectDatabase();
     process.exit(0);
 };
 
