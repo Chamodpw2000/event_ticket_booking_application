@@ -9,15 +9,6 @@ const parsePositiveInt = (value) => {
   return parsed;
 };
 
-const validateNonNegativeInt = (value) => {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
-    return null;
-  }
-
-  return parsed;
-};
-
 const ensureEventExists = async (eventId) => {
   const event = await prisma.event.findUnique({
     where: { id: eventId },
@@ -88,8 +79,6 @@ export const createEvent = async (req, res) => {
       include: {
         eventArtists: true,
         eventTicketTypes: true,
-        eventInventories: true,
-        inventoryHolds: true,
       },
     });
 
@@ -107,8 +96,6 @@ export const getEvents = async (req, res) => {
       include: {
         eventArtists: true,
         eventTicketTypes: true,
-        eventInventories: true,
-        inventoryHolds: true,
       },
     });
 
@@ -203,103 +190,5 @@ export const addEventTicketType = async (req, res) => {
   } catch (error) {
     console.error("Failed to add event ticket type", error);
     return res.status(500).json({ message: "Failed to add event ticket type" });
-  }
-};
-
-export const updateEventInventory = async (req, res) => {
-  const eventId = parsePositiveInt(req.params.eventId);
-  const ticketTypeId = parsePositiveInt(req.params.ticketTypeId);
-  const { totalQuantity, availableQuantity, reservedQuantity } = req.body;
-
-  if (!eventId || !ticketTypeId) {
-    return res.status(400).json({ message: "invalid event id or ticket type id" });
-  }
-
-  const parsedTotal =
-    totalQuantity === undefined ? undefined : validateNonNegativeInt(totalQuantity);
-  const parsedAvailable =
-    availableQuantity === undefined ? undefined : validateNonNegativeInt(availableQuantity);
-  const parsedReserved =
-    reservedQuantity === undefined ? undefined : validateNonNegativeInt(reservedQuantity);
-
-  if (
-    (totalQuantity !== undefined && parsedTotal === null) ||
-    (availableQuantity !== undefined && parsedAvailable === null) ||
-    (reservedQuantity !== undefined && parsedReserved === null)
-  ) {
-    return res.status(400).json({
-      message: "totalQuantity, availableQuantity, and reservedQuantity must be non-negative integers",
-    });
-  }
-
-  if (
-    parsedTotal === undefined &&
-    parsedAvailable === undefined &&
-    parsedReserved === undefined
-  ) {
-    return res.status(400).json({
-      message: "at least one inventory field is required",
-    });
-  }
-
-  try {
-    const ticketType = await prisma.eventTicketType.findFirst({
-      where: {
-        id: ticketTypeId,
-        eventId,
-      },
-      select: { id: true },
-    });
-
-    if (!ticketType) {
-      return res.status(404).json({
-        message: "ticket type not found for event",
-      });
-    }
-
-    const currentInventory = await prisma.eventInventory.findUnique({
-      where: {
-        eventId_ticketTypeId: {
-          eventId,
-          ticketTypeId,
-        },
-      },
-    });
-
-    const nextTotal = parsedTotal ?? currentInventory?.totalQuantity ?? 0;
-    const nextAvailable = parsedAvailable ?? currentInventory?.availableQuantity ?? 0;
-    const nextReserved = parsedReserved ?? currentInventory?.reservedQuantity ?? 0;
-
-    if (nextAvailable + nextReserved > nextTotal) {
-      return res.status(400).json({
-        message: "availableQuantity + reservedQuantity cannot exceed totalQuantity",
-      });
-    }
-
-    const inventory = await prisma.eventInventory.upsert({
-      where: {
-        eventId_ticketTypeId: {
-          eventId,
-          ticketTypeId,
-        },
-      },
-      create: {
-        eventId,
-        ticketTypeId,
-        totalQuantity: nextTotal,
-        availableQuantity: nextAvailable,
-        reservedQuantity: nextReserved,
-      },
-      update: {
-        totalQuantity: nextTotal,
-        availableQuantity: nextAvailable,
-        reservedQuantity: nextReserved,
-      },
-    });
-
-    return res.status(200).json(inventory);
-  } catch (error) {
-    console.error("Failed to update event inventory", error);
-    return res.status(500).json({ message: "Failed to update event inventory" });
   }
 };
