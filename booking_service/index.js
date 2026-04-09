@@ -11,11 +11,11 @@ const PORT = process.env.PORT || 3003;
 app.use(express.json());
 
 app.get("/health", (req, res) => {
-	res.status(200).json({ service: "ticket_service", status: "ok" });
+	res.status(200).json({ service: "booking_service", status: "ok" });
 });
 
 app.get("/", (req, res) => {
-    res.status(200).json({ message: "Welcome to the Ticket Service!" });
+    res.status(200).json({ message: "Welcome to the Booking Service!" });
 });
 
 app.use("/tickets", ticketsRouter);
@@ -26,15 +26,15 @@ app.use("/booking-items", bookingItemsRouter);
 
 const startServer = async () => {
 	try {
-		console.log("Starting ticket_service...");
+		console.log("Starting booking_service...");
 		await connectPrisma();
 		console.log("Database connected");
 
 		app.listen(PORT, () => {
-			console.log(`ticket_service running on port ${PORT}`);
+			console.log(`booking_service running on port ${PORT}`);
 		});
 	} catch (error) {
-		console.error("Failed to start ticket_service", error);
+		console.error("Failed to start booking_service", error);
 		process.exit(1);
 	}
 };
