@@ -11,10 +11,10 @@
 
 */
 -- DropIndex
-DROP INDEX `Payment_transactionId_key` ON `payment`;
+DROP INDEX `Payment_transactionId_key` ON `Payment`;
 
 -- AlterTable
-ALTER TABLE `payment` DROP COLUMN `method`,
+ALTER TABLE `Payment` DROP COLUMN `method`,
     DROP COLUMN `transactionId`,
     ADD COLUMN `bookingId` INTEGER NOT NULL,
     ADD COLUMN `eventId` INTEGER NOT NULL,

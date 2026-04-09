@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prismaClient.js";
+import Venue from "../models/Venue.js";
 
 export const createVenue = async (req, res) => {
   const {
@@ -28,19 +28,17 @@ export const createVenue = async (req, res) => {
   }
 
   try {
-    const venue = await prisma.venue.create({
-      data: {
-        name,
-        description,
-        address,
-        city,
-        state,
-        country,
-        postalCode,
-        capacity: venueCapacity,
-        phone,
-        isActive,
-      },
+    const venue = await Venue.create({
+      name,
+      description,
+      address,
+      city,
+      state,
+      country,
+      postalCode,
+      capacity: venueCapacity,
+      phone,
+      isActive,
     });
 
     return res.status(201).json(venue);
@@ -52,9 +50,7 @@ export const createVenue = async (req, res) => {
 
 export const getVenues = async (req, res) => {
   try {
-    const venues = await prisma.venue.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const venues = await Venue.find().sort({ createdAt: -1 });
 
     return res.status(200).json(venues);
   } catch (error) {

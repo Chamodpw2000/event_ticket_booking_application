@@ -1,6 +1,6 @@
 import express from "express";
 import "dotenv/config";
-import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
+import { connectDatabase, disconnectDatabase } from "./lib/mongoClient.js";
 import venuesRouter from "./routes/venuesRoutes.js";
 
 const app = express();
@@ -24,7 +24,7 @@ app.use("/venues", venuesRouter);
 const startServer = async () => {
 	try {
 		console.log("Starting venue_service...");
-		await connectPrisma();
+		await connectDatabase();
 		console.log("Database connected");
 
 		app.listen(PORT, () => {
@@ -38,7 +38,7 @@ const startServer = async () => {
 
 startServer();
 const shutdown = async () => {
-    await disconnectPrisma();
+	await disconnectDatabase();
     process.exit(0);
 };
 

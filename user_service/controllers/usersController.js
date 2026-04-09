@@ -1,55 +1,20 @@
-import { prisma } from "../lib/prismaClient.js";
 import { createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
+import mongoose from "mongoose";
+import User from "../models/User.js";
+import Role from "../models/Role.js";
+import UserProfile from "../models/UserProfile.js";
+import UserRole from "../models/UserRole.js";
 
-const userResponseFields = {
-  id: true,
-  email: true,
-  status: true,
-  createdAt: true,
-  updatedAt: true,
-  userProfile: {
-    select: {
-      id: true,
-      firstName: true,
-      lastName: true,
-      bio: true,
-      birthday: true,
-      createdAt: true,
-      updatedAt: true,
-    },
-  },
-  userRoles: {
-    select: {
-      role: {
-        select: {
-          id: true,
-          name: true,
-        },
-      },
-    },
-  },
-};
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
 const hashPassword = (password) => {
   return createHash("sha256").update(password).digest("hex");
 };
 
-const toApiUser = (user) => {
-  const { userRoles, ...rest } = user;
-  return {
-    ...rest,
-    roles: userRoles.map((item) => item.role),
-  };
-};
-
-const parseUserId = (rawId) => {
-  const userId = Number(rawId);
-  if (!Number.isInteger(userId) || userId <= 0) {
-    return null;
-  }
-
-  return userId;
+const parseObjectId = (rawId) => {
+  const id = String(rawId ?? "").trim();
+  return OBJECT_ID_REGEX.test(id) ? id : null;
 };
 
 const normalizeRoleIds = (roleIds) => {
@@ -57,9 +22,9 @@ const normalizeRoleIds = (roleIds) => {
     return [];
   }
 
-  return roleIds
-    .map((id) => Number(id))
-    .filter((id) => Number.isInteger(id) && id > 0);
+  return [...new Set(roleIds.map((id) => String(id ?? "").trim()))].filter((id) =>
+    OBJECT_ID_REGEX.test(id),
+  );
 };
 
 const signToken = (user) => {
@@ -79,6 +44,62 @@ const signToken = (user) => {
   );
 };
 
+const mapRole = (role) => ({
+  id: String(role._id),
+  name: role.name,
+});
+
+const mapProfile = (profile) =>
+  profile
+    ? {
+        id: String(profile._id),
+        firstName: profile.firstName,
+        lastName: profile.lastName,
+        bio: profile.bio,
+        birthday: profile.birthday,
+        createdAt: profile.createdAt,
+        updatedAt: profile.updatedAt,
+      }
+    : null;
+
+const mapUser = (user, profile, roles) => ({
+  id: String(user._id),
+  email: user.email,
+  status: user.status,
+  createdAt: user.createdAt,
+  updatedAt: user.updatedAt,
+  userProfile: mapProfile(profile),
+  roles,
+});
+
+const getApiUserById = async (userId) => {
+  const [user, profile, userRoles] = await Promise.all([
+    User.findById(userId).lean(),
+    UserProfile.findOne({ userId }).lean(),
+    UserRole.find({ userId }).populate("roleId", "name").lean(),
+  ]);
+
+  if (!user) {
+    return null;
+  }
+
+  const roles = userRoles
+    .filter((item) => item.roleId)
+    .map((item) => mapRole(item.roleId));
+
+  return mapUser(user, profile, roles);
+};
+
+const ensureRoleIdsExist = async (normalizedRoleIds) => {
+  if (normalizedRoleIds.length === 0) {
+    return true;
+  }
+
+  const objectIds = normalizedRoleIds.map((id) => new mongoose.Types.ObjectId(id));
+  const count = await Role.countDocuments({ _id: { $in: objectIds } });
+  return count === normalizedRoleIds.length;
+};
+
 export const createUser = async (req, res) => {
   const { email, password, status, profile, roleIds } = req.body;
 
@@ -90,9 +111,9 @@ export const createUser = async (req, res) => {
 
   const normalizedRoleIds = normalizeRoleIds(roleIds);
 
-  if (roleIds !== undefined && normalizedRoleIds.length !== roleIds.length) {
+  if (roleIds !== undefined && normalizedRoleIds.length !== new Set(roleIds).size) {
     return res.status(400).json({
-      message: "roleIds must be an array of positive integers",
+      message: "roleIds must be an array of valid ids",
     });
   }
 
@@ -104,8 +125,10 @@ export const createUser = async (req, res) => {
 
   if (
     profile &&
-    (!profile.firstName || !profile.lastName ||
-      typeof profile.firstName !== "string" || typeof profile.lastName !== "string")
+    (!profile.firstName ||
+      !profile.lastName ||
+      typeof profile.firstName !== "string" ||
+      typeof profile.lastName !== "string")
   ) {
     return res.status(400).json({
       message: "profile.firstName and profile.lastName are required",
@@ -123,53 +146,44 @@ export const createUser = async (req, res) => {
   }
 
   try {
-    if (normalizedRoleIds.length > 0) {
-      const existingRolesCount = await prisma.role.count({
-        where: { id: { in: normalizedRoleIds } },
+    const rolesExist = await ensureRoleIdsExist(normalizedRoleIds);
+    if (!rolesExist) {
+      return res.status(400).json({
+        message: "one or more roleIds do not exist",
       });
-
-      if (existingRolesCount !== normalizedRoleIds.length) {
-        return res.status(400).json({
-          message: "one or more roleIds do not exist",
-        });
-      }
     }
 
-    const user = await prisma.user.create({
-      data: {
-        email: email.trim().toLowerCase(),
-        password: hashPassword(password),
-        status: status && typeof status === "string" ? status : "active",
-        ...(profile
-          ? {
-              userProfile: {
-                create: {
-                  firstName: profile.firstName.trim(),
-                  lastName: profile.lastName.trim(),
-                  bio: profile.bio ?? null,
-                  birthday: profile.birthday ? new Date(profile.birthday) : null,
-                },
-              },
-            }
-          : {}),
-        ...(normalizedRoleIds.length > 0
-          ? {
-              userRoles: {
-                create: normalizedRoleIds.map((roleId) => ({
-                  role: { connect: { id: roleId } },
-                })),
-              },
-            }
-          : {}),
-      },
-      select: userResponseFields,
+    const createdUser = await User.create({
+      email: String(email).trim().toLowerCase(),
+      password: hashPassword(password),
+      status: status && typeof status === "string" ? status : "active",
     });
 
-    return res.status(201).json(toApiUser(user));
+    if (profile) {
+      await UserProfile.create({
+        userId: createdUser._id,
+        firstName: profile.firstName.trim(),
+        lastName: profile.lastName.trim(),
+        bio: profile.bio ?? null,
+        birthday: profile.birthday ? new Date(profile.birthday) : null,
+      });
+    }
+
+    if (normalizedRoleIds.length > 0) {
+      await UserRole.insertMany(
+        normalizedRoleIds.map((roleId) => ({
+          userId: createdUser._id,
+          roleId: new mongoose.Types.ObjectId(roleId),
+        })),
+      );
+    }
+
+    const apiUser = await getApiUserById(createdUser._id);
+    return res.status(201).json(apiUser);
   } catch (error) {
     console.error("Failed to create user", error);
 
-    if (error?.code === "P2002") {
+    if (error?.code === 11000) {
       return res.status(409).json({
         message: "email already exists",
       });
@@ -179,14 +193,12 @@ export const createUser = async (req, res) => {
   }
 };
 
-export const getUsers = async (req, res) => {
+export const getUsers = async (_req, res) => {
   try {
-    const users = await prisma.user.findMany({
-      orderBy: { createdAt: "desc" },
-      select: userResponseFields,
-    });
+    const users = await User.find().sort({ createdAt: -1 }).lean();
+    const apiUsers = await Promise.all(users.map((user) => getApiUserById(user._id)));
 
-    return res.status(200).json(users.map(toApiUser));
+    return res.status(200).json(apiUsers.filter(Boolean));
   } catch (error) {
     console.error("Failed to fetch users", error);
     return res.status(500).json({ message: "Failed to fetch users" });
@@ -194,23 +206,20 @@ export const getUsers = async (req, res) => {
 };
 
 export const getUserById = async (req, res) => {
-  const userId = parseUserId(req.params.id);
+  const userId = parseObjectId(req.params.id);
 
   if (!userId) {
     return res.status(400).json({ message: "invalid user id" });
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { id: userId },
-      select: userResponseFields,
-    });
+    const user = await getApiUserById(userId);
 
     if (!user) {
       return res.status(404).json({ message: "user not found" });
     }
 
-    return res.status(200).json(toApiUser(user));
+    return res.status(200).json(user);
   } catch (error) {
     console.error("Failed to fetch user", error);
     return res.status(500).json({ message: "Failed to fetch user" });
@@ -218,7 +227,7 @@ export const getUserById = async (req, res) => {
 };
 
 export const updateUser = async (req, res) => {
-  const userId = parseUserId(req.params.id);
+  const userId = parseObjectId(req.params.id);
   const { email, password, status, profile, roleIds } = req.body;
 
   if (!userId) {
@@ -237,9 +246,9 @@ export const updateUser = async (req, res) => {
 
   const normalizedRoleIds = normalizeRoleIds(roleIds);
 
-  if (roleIds !== undefined && normalizedRoleIds.length !== roleIds.length) {
+  if (roleIds !== undefined && normalizedRoleIds.length !== new Set(roleIds).size) {
     return res.status(400).json({
-      message: "roleIds must be an array of positive integers",
+      message: "roleIds must be an array of valid ids",
     });
   }
 
@@ -268,55 +277,64 @@ export const updateUser = async (req, res) => {
   }
 
   try {
-    const existingUser = await prisma.user.findUnique({
-      where: { id: userId },
-      include: { userProfile: true },
-    });
+    const existingUser = await User.findById(userId).lean();
 
     if (!existingUser) {
       return res.status(404).json({ message: "user not found" });
     }
 
-    if (roleIds !== undefined && normalizedRoleIds.length > 0) {
-      const existingRolesCount = await prisma.role.count({
-        where: { id: { in: normalizedRoleIds } },
-      });
-
-      if (existingRolesCount !== normalizedRoleIds.length) {
+    if (roleIds !== undefined) {
+      const rolesExist = await ensureRoleIdsExist(normalizedRoleIds);
+      if (!rolesExist) {
         return res.status(400).json({ message: "one or more roleIds do not exist" });
       }
     }
 
-    const data = {};
+    const updateData = {};
 
     if (email !== undefined) {
-      data.email = String(email).trim().toLowerCase();
+      updateData.email = String(email).trim().toLowerCase();
     }
 
     if (password !== undefined) {
-      data.password = hashPassword(String(password));
+      updateData.password = hashPassword(String(password));
     }
 
     if (status !== undefined) {
-      data.status = String(status);
+      updateData.status = String(status);
+    }
+
+    if (Object.keys(updateData).length > 0) {
+      await User.updateOne({ _id: userId }, { $set: updateData });
     }
 
     if (profile !== undefined) {
+      const existingProfile = await UserProfile.findOne({ userId }).lean();
+
       if (profile === null) {
-        data.userProfile = { delete: true };
-      } else if (existingUser.userProfile) {
-        data.userProfile = {
-          update: {
-            ...(profile.firstName === undefined
-              ? {}
-              : { firstName: profile.firstName.trim() }),
-            ...(profile.lastName === undefined ? {} : { lastName: profile.lastName.trim() }),
-            ...(profile.bio === undefined ? {} : { bio: profile.bio }),
-            ...(profile.birthday === undefined
-              ? {}
-              : { birthday: profile.birthday ? new Date(profile.birthday) : null }),
-          },
-        };
+        await UserProfile.deleteOne({ userId });
+      } else if (existingProfile) {
+        const profileUpdate = {};
+
+        if (profile.firstName !== undefined) {
+          profileUpdate.firstName = profile.firstName.trim();
+        }
+
+        if (profile.lastName !== undefined) {
+          profileUpdate.lastName = profile.lastName.trim();
+        }
+
+        if (profile.bio !== undefined) {
+          profileUpdate.bio = profile.bio;
+        }
+
+        if (profile.birthday !== undefined) {
+          profileUpdate.birthday = profile.birthday ? new Date(profile.birthday) : null;
+        }
+
+        if (Object.keys(profileUpdate).length > 0) {
+          await UserProfile.updateOne({ userId }, { $set: profileUpdate });
+        }
       } else {
         if (!profile.firstName || !profile.lastName) {
           return res.status(400).json({
@@ -324,52 +342,36 @@ export const updateUser = async (req, res) => {
           });
         }
 
-        data.userProfile = {
-          create: {
-            firstName: profile.firstName.trim(),
-            lastName: profile.lastName.trim(),
-            bio: profile.bio ?? null,
-            birthday: profile.birthday ? new Date(profile.birthday) : null,
-          },
-        };
+        await UserProfile.create({
+          userId,
+          firstName: profile.firstName.trim(),
+          lastName: profile.lastName.trim(),
+          bio: profile.bio ?? null,
+          birthday: profile.birthday ? new Date(profile.birthday) : null,
+        });
       }
     }
 
-    const updatedUser = await prisma.$transaction(async (tx) => {
-      const user = await tx.user.update({
-        where: { id: userId },
-        data,
-        select: userResponseFields,
-      });
+    if (roleIds !== undefined) {
+      await UserRole.deleteMany({ userId });
 
-      if (roleIds !== undefined) {
-        await tx.userRoles.deleteMany({ where: { userId } });
-
-        if (normalizedRoleIds.length > 0) {
-          await tx.userRoles.createMany({
-            data: normalizedRoleIds.map((roleId) => ({ userId, roleId })),
-          });
-        }
-
-        return tx.user.findUnique({
-          where: { id: userId },
-          select: userResponseFields,
-        });
+      if (normalizedRoleIds.length > 0) {
+        await UserRole.insertMany(
+          normalizedRoleIds.map((roleId) => ({
+            userId,
+            roleId: new mongoose.Types.ObjectId(roleId),
+          })),
+        );
       }
+    }
 
-      return user;
-    });
-
-    return res.status(200).json(toApiUser(updatedUser));
+    const updatedUser = await getApiUserById(userId);
+    return res.status(200).json(updatedUser);
   } catch (error) {
     console.error("Failed to update user", error);
 
-    if (error?.code === "P2002") {
+    if (error?.code === 11000) {
       return res.status(409).json({ message: "email already exists" });
-    }
-
-    if (error?.code === "P2025") {
-      return res.status(404).json({ message: "user not found" });
     }
 
     return res.status(500).json({ message: "Failed to update user" });
@@ -377,27 +379,27 @@ export const updateUser = async (req, res) => {
 };
 
 export const deleteUser = async (req, res) => {
-  const userId = parseUserId(req.params.id);
+  const userId = parseObjectId(req.params.id);
 
   if (!userId) {
     return res.status(400).json({ message: "invalid user id" });
   }
 
   try {
-    await prisma.$transaction(async (tx) => {
-      await tx.userRole.deleteMany({ where: { userId } });
-      await tx.userProfile.deleteMany({ where: { userId } });
-      await tx.user.delete({ where: { id: userId } });
-    });
+    const deletedUser = await User.findByIdAndDelete(userId);
+
+    if (!deletedUser) {
+      return res.status(404).json({ message: "user not found" });
+    }
+
+    await Promise.all([
+      UserRole.deleteMany({ userId }),
+      UserProfile.deleteMany({ userId }),
+    ]);
 
     return res.status(200).json({ message: "user deleted successfully" });
   } catch (error) {
     console.error("Failed to delete user", error);
-
-    if (error?.code === "P2025") {
-      return res.status(404).json({ message: "user not found" });
-    }
-
     return res.status(500).json({ message: "Failed to delete user" });
   }
 };
@@ -412,27 +414,19 @@ export const loginUser = async (req, res) => {
   }
 
   try {
-    const user = await prisma.user.findUnique({
-      where: { email },
-      select: {
-        id: true,
-        email: true,
-        password: true,
-      },
-    });
-
+    const user = await User.findOne({ email: String(email).trim().toLowerCase() }).lean();
     const hashedPassword = hashPassword(password);
 
     if (!user || user.password !== hashedPassword) {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
-    const token = signToken(user);
+    const token = signToken({ id: String(user._id), email: user.email });
 
     return res.status(200).json({
       token,
       user: {
-        id: user.id,
+        id: String(user._id),
         email: user.email,
       },
     });

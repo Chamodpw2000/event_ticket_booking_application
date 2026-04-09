@@ -1,11 +1,23 @@
-import { prisma } from "../lib/prismaClient.js";
+import Role from "../models/Role.js";
+import UserRole from "../models/UserRole.js";
 
-const roleResponseFields = {
-  id: true,
-  name: true,
-  createdAt: true,
-  updatedAt: true,
+const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
+
+const parseRoleId = (rawId) => {
+  const roleId = String(rawId ?? "").trim();
+  if (!OBJECT_ID_REGEX.test(roleId)) {
+    return null;
+  }
+
+  return roleId;
 };
+
+const mapRole = (role) => ({
+  id: String(role._id),
+  name: role.name,
+  createdAt: role.createdAt,
+  updatedAt: role.updatedAt,
+});
 
 export const createRole = async (req, res) => {
   const { name } = req.body;
@@ -15,16 +27,12 @@ export const createRole = async (req, res) => {
   }
 
   try {
-    const role = await prisma.role.create({
-      data: { name: name.trim() },
-      select: roleResponseFields,
-    });
-
-    return res.status(201).json(role);
+    const role = await Role.create({ name: name.trim() });
+    return res.status(201).json(mapRole(role));
   } catch (error) {
     console.error("Failed to create role", error);
 
-    if (error?.code === "P2002") {
+    if (error?.code === 11000) {
       return res.status(409).json({ message: "role already exists" });
     }
 
@@ -34,12 +42,8 @@ export const createRole = async (req, res) => {
 
 export const getRoles = async (_req, res) => {
   try {
-    const roles = await prisma.role.findMany({
-      orderBy: { createdAt: "desc" },
-      select: roleResponseFields,
-    });
-
-    return res.status(200).json(roles);
+    const roles = await Role.find().sort({ createdAt: -1 }).lean();
+    return res.status(200).json(roles.map(mapRole));
   } catch (error) {
     console.error("Failed to fetch roles", error);
     return res.status(500).json({ message: "Failed to fetch roles" });
@@ -47,23 +51,20 @@ export const getRoles = async (_req, res) => {
 };
 
 export const getRoleById = async (req, res) => {
-  const roleId = Number(req.params.id);
+  const roleId = parseRoleId(req.params.id);
 
-  if (!Number.isInteger(roleId) || roleId <= 0) {
+  if (!roleId) {
     return res.status(400).json({ message: "invalid role id" });
   }
 
   try {
-    const role = await prisma.role.findUnique({
-      where: { id: roleId },
-      select: roleResponseFields,
-    });
+    const role = await Role.findById(roleId).lean();
 
     if (!role) {
       return res.status(404).json({ message: "role not found" });
     }
 
-    return res.status(200).json(role);
+    return res.status(200).json(mapRole(role));
   } catch (error) {
     console.error("Failed to fetch role", error);
     return res.status(500).json({ message: "Failed to fetch role" });
@@ -71,10 +72,10 @@ export const getRoleById = async (req, res) => {
 };
 
 export const updateRole = async (req, res) => {
-  const roleId = Number(req.params.id);
+  const roleId = parseRoleId(req.params.id);
   const { name } = req.body;
 
-  if (!Number.isInteger(roleId) || roleId <= 0) {
+  if (!roleId) {
     return res.status(400).json({ message: "invalid role id" });
   }
 
@@ -83,21 +84,21 @@ export const updateRole = async (req, res) => {
   }
 
   try {
-    const role = await prisma.role.update({
-      where: { id: roleId },
-      data: { name: name.trim() },
-      select: roleResponseFields,
-    });
+    const role = await Role.findByIdAndUpdate(
+      roleId,
+      { name: name.trim() },
+      { new: true, runValidators: true },
+    ).lean();
 
-    return res.status(200).json(role);
-  } catch (error) {
-    console.error("Failed to update role", error);
-
-    if (error?.code === "P2025") {
+    if (!role) {
       return res.status(404).json({ message: "role not found" });
     }
 
-    if (error?.code === "P2002") {
+    return res.status(200).json(mapRole(role));
+  } catch (error) {
+    console.error("Failed to update role", error);
+
+    if (error?.code === 11000) {
       return res.status(409).json({ message: "role already exists" });
     }
 
@@ -106,25 +107,24 @@ export const updateRole = async (req, res) => {
 };
 
 export const deleteRole = async (req, res) => {
-  const roleId = Number(req.params.id);
+  const roleId = parseRoleId(req.params.id);
 
-  if (!Number.isInteger(roleId) || roleId <= 0) {
+  if (!roleId) {
     return res.status(400).json({ message: "invalid role id" });
   }
 
   try {
-    await prisma.role.delete({
-      where: { id: roleId },
-    });
+    const role = await Role.findByIdAndDelete(roleId).lean();
+
+    if (!role) {
+      return res.status(404).json({ message: "role not found" });
+    }
+
+    await UserRole.deleteMany({ roleId });
 
     return res.status(200).json({ message: "role deleted successfully" });
   } catch (error) {
     console.error("Failed to delete role", error);
-
-    if (error?.code === "P2025") {
-      return res.status(404).json({ message: "role not found" });
-    }
-
     return res.status(500).json({ message: "Failed to delete role" });
   }
 };
