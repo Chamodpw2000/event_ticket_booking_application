@@ -155,7 +155,7 @@ export const addEventArtists = async (req, res) => {
 
 export const addEventTicketType = async (req, res) => {
   const eventId = parsePositiveInt(req.params.eventId);
-  const { name, price, currency, description } = req.body;
+  const { name, price, currency, description, initialStock } = req.body;
 
   if (!eventId) {
     return res.status(400).json({ message: "invalid event id" });
@@ -170,6 +170,11 @@ export const addEventTicketType = async (req, res) => {
     return res.status(400).json({ message: "price must be a non-negative number" });
   }
 
+  const parsedInitialStock = parsePositiveInt(initialStock);
+  if (!parsedInitialStock) {
+    return res.status(400).json({ message: "initialStock must be a positive integer" });
+  }
+
   try {
     const eventExists = await ensureEventExists(eventId);
     if (!eventExists) {
@@ -179,6 +184,7 @@ export const addEventTicketType = async (req, res) => {
     const ticketType = await prisma.eventTicketType.create({
       data: {
         eventId,
+        initialStock: parsedInitialStock,
         name: name.trim(),
         price: parsedPrice,
         currency: typeof currency === "string" && currency.trim() ? currency.trim() : "USD",
@@ -189,6 +195,6 @@ export const addEventTicketType = async (req, res) => {
     return res.status(201).json(ticketType);
   } catch (error) {
     console.error("Failed to add event ticket type", error);
-    return res.status(500).json({ message: "Failed to add event ticket type" });
+    return res.status(500).json({ message: "Failed to add event ticket type" + error.message });
   }
 };
