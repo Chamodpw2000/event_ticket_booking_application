@@ -8,7 +8,7 @@
 
 */
 -- AlterTable
-ALTER TABLE `event` DROP COLUMN `date`,
+ALTER TABLE `Event` DROP COLUMN `date`,
     ADD COLUMN `bannerUrl` VARCHAR(191) NULL,
     ADD COLUMN `category` VARCHAR(191) NULL,
     ADD COLUMN `endTime` DATETIME(3) NOT NULL,

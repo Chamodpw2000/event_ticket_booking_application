@@ -1,6 +1,6 @@
 import express from "express";
 import "dotenv/config";
-import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
+import { connectDatabase, disconnectDatabase } from "./lib/mongoClient.js";
 import artistsRouter from "./routes/artistsRoutes.js";
 
 const app = express();
@@ -22,7 +22,7 @@ app.use("/artists", artistsRouter);
 const startServer = async () => {
 	try {
 		console.log("Starting artist_service...");
-            await connectPrisma();
+		await connectDatabase();
 		console.log("Database connected");
 
 		app.listen(PORT, () => {
@@ -36,7 +36,7 @@ const startServer = async () => {
 
 startServer();
 const shutdown = async () => {
-    await disconnectPrisma();
+	await disconnectDatabase();
     process.exit(0);
 };
 

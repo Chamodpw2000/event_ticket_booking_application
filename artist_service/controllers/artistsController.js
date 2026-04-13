@@ -1,4 +1,4 @@
-import { prisma } from "../lib/prismaClient.js";
+import Artist from "../models/Artist.js";
 
 export const createArtist = async (req, res) => {
   const { name, email, bio, genre, profileImageUrl, isActive } = req.body;
@@ -10,22 +10,20 @@ export const createArtist = async (req, res) => {
   }
 
   try {
-    const artist = await prisma.artist.create({
-      data: {
-        name,
-        email,
-        bio,
-        genre,
-        profileImageUrl,
-        isActive,
-      },
+    const artist = await Artist.create({
+      name,
+      email,
+      bio,
+      genre,
+      profileImageUrl,
+      isActive,
     });
 
     return res.status(201).json(artist);
   } catch (error) {
     console.error("Failed to create artist", error);
 
-    if (error?.code === "P2002") {
+    if (error?.code === 11000) {
       return res.status(409).json({
         message: "email already exists",
       });
@@ -37,9 +35,7 @@ export const createArtist = async (req, res) => {
 
 export const getArtists = async (req, res) => {
   try {
-    const artists = await prisma.artist.findMany({
-      orderBy: { createdAt: "desc" },
-    });
+    const artists = await Artist.find().sort({ createdAt: -1 });
 
     return res.status(200).json(artists);
   } catch (error) {

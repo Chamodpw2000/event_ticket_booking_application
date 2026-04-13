@@ -1,0 +1,139 @@
+services:
+
+  mongodb:
+    image: mongo:7
+    container_name: mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - app-network
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql
+    restart: always
+    environment:
+      MYSQL_ROOT_PASSWORD: "MyNewPass123!"
+      MYSQL_DATABASE: event_platform_db
+    ports:
+      - "3307:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    networks:
+      - app-network
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 10s
+      timeout: 10s
+      retries: 10
+      start_period: 60s
+
+  artist_service:
+    build: ./artist_service
+    container_name: artist_service
+    restart: always
+    ports:
+      - "3004:3004"
+    environment:
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_artist_db"
+    depends_on:
+      mongodb:
+        condition: service_started
+    networks:
+      - app-network
+
+  event_service:
+    build: ./event_service
+    container_name: event_service
+    restart: always
+    ports:
+      - "3001:3001"
+    environment:
+      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_event_db"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  inventory_service:
+    build: ./inventory_service
+    container_name: inventory_service
+    restart: always
+    ports:
+      - "3007:3007"
+    environment:
+      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_inventory_db"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  payment_service:
+    build: ./payment_service
+    container_name: payment_service
+    restart: always
+    ports:
+      - "3006:3006"
+    environment:
+      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_payment_db"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  booking_service:
+    build: ./booking_service
+    container_name: booking_service
+    restart: always
+    ports:
+      - "3003:3003"
+    environment:
+      DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_booking_db"
+    depends_on:
+      mysql:
+        condition: service_healthy
+    networks:
+      - app-network
+
+  user_service:
+    build: ./user_service
+    container_name: user_service
+    restart: always
+    ports:
+      - "3002:3002"
+    environment:
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_user_db"
+      JWT_SECRET: "replace-with-a-strong-secret"
+    depends_on:
+      mongodb:
+        condition: service_started
+    networks:
+      - app-network
+
+  venue_service:
+    build: ./venue_service
+    container_name: venue_service
+    restart: always
+    ports:
+      - "3005:3005"
+    environment:
+      DATABASE_URL: "mongodb://mongodb:27017/event_platform_venue_db"
+    depends_on:
+      mongodb:
+        condition: service_started
+    networks:
+      - app-network
+
+volumes:
+  mongodb_data:
+  mysql_data:
+
+networks:
+  app-network:
+    driver: bridge

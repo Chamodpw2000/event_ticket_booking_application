@@ -1,17 +1,17 @@
 import { prisma } from "../lib/prismaClient.js";
+import {
+  SFNClient,
+  StartExecutionCommand,
+  StartSyncExecutionCommand,
+} from "@aws-sdk/client-sfn";
+
+const sfnClient = new SFNClient({
+  region: process.env.AWS_REGION || "us-east-1",
+});
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
   if (!Number.isInteger(parsed) || parsed <= 0) {
-    return null;
-  }
-
-  return parsed;
-};
-
-const validateNonNegativeInt = (value) => {
-  const parsed = Number(value);
-  if (!Number.isInteger(parsed) || parsed < 0) {
     return null;
   }
 
@@ -88,8 +88,6 @@ export const createEvent = async (req, res) => {
       include: {
         eventArtists: true,
         eventTicketTypes: true,
-        eventInventories: true,
-        inventoryHolds: true,
       },
     });
 
@@ -107,8 +105,6 @@ export const getEvents = async (req, res) => {
       include: {
         eventArtists: true,
         eventTicketTypes: true,
-        eventInventories: true,
-        inventoryHolds: true,
       },
     });
 
@@ -168,7 +164,7 @@ export const addEventArtists = async (req, res) => {
 
 export const addEventTicketType = async (req, res) => {
   const eventId = parsePositiveInt(req.params.eventId);
-  const { name, price, currency, description } = req.body;
+  const { name, price, currency, description, initialStock } = req.body;
 
   if (!eventId) {
     return res.status(400).json({ message: "invalid event id" });
@@ -183,6 +179,11 @@ export const addEventTicketType = async (req, res) => {
     return res.status(400).json({ message: "price must be a non-negative number" });
   }
 
+  const parsedInitialStock = parsePositiveInt(initialStock);
+  if (!parsedInitialStock) {
+    return res.status(400).json({ message: "initialStock must be a positive integer" });
+  }
+
   try {
     const eventExists = await ensureEventExists(eventId);
     if (!eventExists) {
@@ -192,6 +193,7 @@ export const addEventTicketType = async (req, res) => {
     const ticketType = await prisma.eventTicketType.create({
       data: {
         eventId,
+        initialStock: parsedInitialStock,
         name: name.trim(),
         price: parsedPrice,
         currency: typeof currency === "string" && currency.trim() ? currency.trim() : "USD",
@@ -202,104 +204,139 @@ export const addEventTicketType = async (req, res) => {
     return res.status(201).json(ticketType);
   } catch (error) {
     console.error("Failed to add event ticket type", error);
-    return res.status(500).json({ message: "Failed to add event ticket type" });
+    return res.status(500).json({ message: "Failed to add event ticket type" + error.message });
   }
 };
 
-export const updateEventInventory = async (req, res) => {
-  const eventId = parsePositiveInt(req.params.eventId);
+export const deleteEventTicketType = async (req, res) => {
   const ticketTypeId = parsePositiveInt(req.params.ticketTypeId);
-  const { totalQuantity, availableQuantity, reservedQuantity } = req.body;
 
-  if (!eventId || !ticketTypeId) {
-    return res.status(400).json({ message: "invalid event id or ticket type id" });
-  }
-
-  const parsedTotal =
-    totalQuantity === undefined ? undefined : validateNonNegativeInt(totalQuantity);
-  const parsedAvailable =
-    availableQuantity === undefined ? undefined : validateNonNegativeInt(availableQuantity);
-  const parsedReserved =
-    reservedQuantity === undefined ? undefined : validateNonNegativeInt(reservedQuantity);
-
-  if (
-    (totalQuantity !== undefined && parsedTotal === null) ||
-    (availableQuantity !== undefined && parsedAvailable === null) ||
-    (reservedQuantity !== undefined && parsedReserved === null)
-  ) {
-    return res.status(400).json({
-      message: "totalQuantity, availableQuantity, and reservedQuantity must be non-negative integers",
-    });
-  }
-
-  if (
-    parsedTotal === undefined &&
-    parsedAvailable === undefined &&
-    parsedReserved === undefined
-  ) {
-    return res.status(400).json({
-      message: "at least one inventory field is required",
-    });
+  if (!ticketTypeId) {
+    return res.status(400).json({ message: "invalid ticket type id" });
   }
 
   try {
-    const ticketType = await prisma.eventTicketType.findFirst({
-      where: {
-        id: ticketTypeId,
-        eventId,
-      },
+    const ticketType = await prisma.eventTicketType.findUnique({
+      where: { id: ticketTypeId },
       select: { id: true },
     });
 
     if (!ticketType) {
-      return res.status(404).json({
-        message: "ticket type not found for event",
-      });
+      return res.status(404).json({ message: "ticket type not found" });
     }
 
-    const currentInventory = await prisma.eventInventory.findUnique({
-      where: {
-        eventId_ticketTypeId: {
-          eventId,
-          ticketTypeId,
-        },
-      },
+    await prisma.eventTicketType.delete({
+      where: { id: ticketTypeId },
     });
 
-    const nextTotal = parsedTotal ?? currentInventory?.totalQuantity ?? 0;
-    const nextAvailable = parsedAvailable ?? currentInventory?.availableQuantity ?? 0;
-    const nextReserved = parsedReserved ?? currentInventory?.reservedQuantity ?? 0;
-
-    if (nextAvailable + nextReserved > nextTotal) {
-      return res.status(400).json({
-        message: "availableQuantity + reservedQuantity cannot exceed totalQuantity",
-      });
-    }
-
-    const inventory = await prisma.eventInventory.upsert({
-      where: {
-        eventId_ticketTypeId: {
-          eventId,
-          ticketTypeId,
-        },
-      },
-      create: {
-        eventId,
-        ticketTypeId,
-        totalQuantity: nextTotal,
-        availableQuantity: nextAvailable,
-        reservedQuantity: nextReserved,
-      },
-      update: {
-        totalQuantity: nextTotal,
-        availableQuantity: nextAvailable,
-        reservedQuantity: nextReserved,
-      },
-    });
-
-    return res.status(200).json(inventory);
+    return res.status(204).send();
   } catch (error) {
-    console.error("Failed to update event inventory", error);
-    return res.status(500).json({ message: "Failed to update event inventory" });
+    console.error("Failed to delete event ticket type", error);
+    return res.status(500).json({ message: "Failed to delete event ticket type" });
+  }
+};
+
+export const startAddTicketWithInventorySaga = async (req, res) => {
+  const {
+    eventId,
+    name,
+    price,
+    currency,
+    description,
+    initialStock,
+    totalQuantity,
+  } = req.body;
+
+  const parsedEventId = parsePositiveInt(eventId);
+  const parsedInitialStock = parsePositiveInt(initialStock);
+  const parsedTotalQuantity = parsePositiveInt(totalQuantity);
+  const parsedPrice = Number(price);
+  const waitForResult = req.query.waitForResult === "true" || req.body?.waitForResult === true;
+
+  if (!parsedEventId) {
+    return res.status(400).json({ message: "eventId must be a positive integer" });
+  }
+
+  if (!name || typeof name !== "string" || !name.trim()) {
+    return res.status(400).json({ message: "name is required" });
+  }
+
+  if (!Number.isFinite(parsedPrice) || parsedPrice < 0) {
+    return res.status(400).json({ message: "price must be a non-negative number" });
+  }
+
+  if (!parsedInitialStock) {
+    return res.status(400).json({ message: "initialStock must be a positive integer" });
+  }
+
+  if (!parsedTotalQuantity) {
+    return res.status(400).json({ message: "totalQuantity must be a positive integer" });
+  }
+
+  if (!process.env.STATE_MACHINE_ARN) {
+    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+  }
+
+  try {
+    const sagaInput = {
+      eventId: parsedEventId,
+      name: name.trim(),
+      price: parsedPrice,
+      currency: typeof currency === "string" && currency.trim() ? currency.trim() : "USD",
+      description: typeof description === "string" && description.trim() ? description.trim() : null,
+      initialStock: parsedInitialStock,
+      totalQuantity: parsedTotalQuantity,
+    };
+
+    if (waitForResult) {
+      const syncCommand = new StartSyncExecutionCommand({
+        stateMachineArn: process.env.STATE_MACHINE_ARN,
+        input: JSON.stringify(sagaInput),
+        name: `ticket-saga-${parsedEventId}-${Date.now()}`,
+      });
+
+      const syncResult = await sfnClient.send(syncCommand);
+      const parsedOutput = syncResult.output ? JSON.parse(syncResult.output) : null;
+
+      if (syncResult.status !== "SUCCEEDED") {
+        return res.status(500).json({
+          message: "Saga execution failed",
+          executionArn: syncResult.executionArn,
+          status: syncResult.status,
+          error: syncResult.error,
+          cause: syncResult.cause,
+        });
+      }
+
+      return res.status(200).json({
+        message: "Saga execution completed",
+        executionArn: syncResult.executionArn,
+        status: syncResult.status,
+        ticketTypeId: parsedOutput?.ticketTypeId ?? null,
+        inventoryId: parsedOutput?.addInventoryResult?.Payload?.inventoryId ?? null,
+        result: parsedOutput,
+      });
+    }
+
+    const command = new StartExecutionCommand({
+      stateMachineArn: process.env.STATE_MACHINE_ARN,
+      name: `ticket-saga-${parsedEventId}-${Date.now()}`,
+      input: JSON.stringify(sagaInput),
+    });
+
+    const result = await sfnClient.send(command);
+
+    return res.status(202).json({
+      message: "Saga execution started",
+      executionArn: result.executionArn,
+      startDate: result.startDate,
+      mode: "async",
+    });
+  } catch (error) {
+    console.error("Failed to start add ticket inventory saga", error);
+    return res.status(500).json({
+      message: "Failed to start add ticket inventory saga",
+      error: error?.message,
+    });
   }
 };
