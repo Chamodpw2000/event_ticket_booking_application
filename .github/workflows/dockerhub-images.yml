@@ -102,6 +102,11 @@ jobs:
           context: ./event_service
           file: ./event_service/Dockerfile
           push: true
+          secrets: |
+            aws_region=${{ secrets.AWS_REGION }}
+            ssm_state_machine_arn_param=${{ secrets.SSM_STATE_MACHINE_ARN_PARAM }}
+            aws_access_key_id=${{ secrets.AWS_ACCESS_KEY_ID }}
+            aws_secret_access_key=${{ secrets.AWS_SECRET_ACCESS_KEY }}
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/event_service:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/event_service:${{ github.sha }}

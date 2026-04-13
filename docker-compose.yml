@@ -48,7 +48,13 @@ services:
       - app-network
 
   event_service:
-    build: ./event_service
+    build:
+      context: ./event_service
+      args:
+        AWS_REGION: ${AWS_REGION:-us-east-1}
+        SSM_STATE_MACHINE_ARN_PARAM: ${SSM_STATE_MACHINE_ARN_PARAM:-/event-service/state-machine-arn}
+        AWS_ACCESS_KEY_ID: ${AWS_ACCESS_KEY_ID}
+        AWS_SECRET_ACCESS_KEY: ${AWS_SECRET_ACCESS_KEY}
     container_name: event_service
     restart: always
     ports:
