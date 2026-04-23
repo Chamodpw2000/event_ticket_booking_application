@@ -24,7 +24,6 @@ erDiagram
         string transactionType
         string providerReference
         string status
-        json responsePayload
         datetime createdAt
     }
     REFUND {
@@ -67,7 +66,6 @@ The Payment Service manages payment processing, transactions, and refunds.
 - **transactionType**: Transaction type (e.g., "charge", "capture", "authorize")
 - **providerReference**: Provider's transaction reference
 - **status**: Transaction status (e.g., "success", "failed", "pending")
-- **responsePayload**: Full response from payment provider (JSON)
 - **createdAt**: Transaction creation timestamp
 
 #### Refund
