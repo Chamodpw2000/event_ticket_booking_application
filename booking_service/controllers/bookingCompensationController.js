@@ -13,7 +13,7 @@ const parsePositiveInt = (value) => {
 // Idempotent: if already CANCELLED, returns 200 with current booking.
 export const cancelBooking = async (req, res) => {
   const bookingId = parsePositiveInt(req.params.bookingId);
-  const reason = typeof req.body?.reason === "string" ? req.body.reason : "Compensation: cancel booking";
+  const reason = "Canceled due to compensation function";
 
   if (!bookingId) {
     return res.status(400).json({ message: "bookingId must be a positive integer" });
