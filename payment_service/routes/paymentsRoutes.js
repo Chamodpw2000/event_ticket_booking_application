@@ -1,9 +1,14 @@
 import { Router } from "express";
-import { createPayment, getPayments } from "../controllers/paymentsController.js";
+import {
+	createPayment,
+	getPayments,
+	refundPayment,
+} from "../controllers/paymentsController.js";
 
 const paymentsRouter = Router();
 
 paymentsRouter.post("/", createPayment);
 paymentsRouter.get("/", getPayments);
+paymentsRouter.post("/:paymentId/refunds", refundPayment);
 
 export default paymentsRouter;

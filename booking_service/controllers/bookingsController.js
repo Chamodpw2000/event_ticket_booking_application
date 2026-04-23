@@ -126,6 +126,82 @@ export const getBookingById = async (req, res) => {
   }
 };
 
+export const confirmBooking = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  const rawReason = req.body?.reason;
+  const reason =
+    typeof rawReason === "string" && rawReason.trim() ? rawReason.trim().slice(0, 255) : null;
+
+  const paymentStatus = "PAID";
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking) {
+        const error = new Error("BOOKING_NOT_FOUND");
+        error.code = "BOOKING_NOT_FOUND";
+        throw error;
+      }
+
+      if (booking.status === "CONFIRMED") {
+        return { booking, changed: false };
+      }
+
+      if (booking.status === "CANCELLED") {
+        const error = new Error("BOOKING_CANCELLED");
+        error.code = "BOOKING_CANCELLED";
+        throw error;
+      }
+
+      if (booking.status === "FAILED" || booking.status === "EXPIRED") {
+        const error = new Error("BOOKING_EXPIRED");
+        error.code = "BOOKING_EXPIRED";
+        throw error;
+      }
+
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CONFIRMED", paymentStatus },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: updatedBooking.id,
+          oldStatus: booking.status,
+          newStatus: "CONFIRMED",
+          reason: reason ?? "Booking confirmed",
+        },
+      });
+
+      return { booking: updatedBooking, changed: true };
+    });
+
+    return res.status(200).json({
+      booking: result.booking,
+      changed: result.changed,
+    });
+  } catch (error) {
+    if (error?.code === "BOOKING_NOT_FOUND") {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (error?.code === "BOOKING_CANCELLED") {
+      return res.status(409).json({ message: "Booking is CANCELLED" });
+    }
+
+    if (error?.code === "BOOKING_EXPIRED") {
+      return res.status(409).json({ message: "Booking is EXPIRED" });
+    }
+
+    console.error("Failed to confirm booking", error);
+    return res.status(500).json({ message: "Failed to confirm booking" });
+  }
+};
+
 export const checkPaymentAvailability = async (req, res) => {
   const bookingId = parsePositiveInt(req.params.bookingId);
   if (!bookingId) {
