@@ -1,6 +1,21 @@
 import { prisma } from "../lib/prismaClient.js";
 
-const BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED", "FAILED", "CANCELLED"]);
+const BOOKING_STATUSES = new Set([
+  "PENDING",
+  "CONFIRMED",
+  "FAILED",
+  "CANCELLED",
+  "EXPIRED",
+]);
+
+const parsePositiveInt = (value) => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
 
 const normalizeBookingStatus = (value) => {
   if (value === undefined || value === null || value === "") {
@@ -28,7 +43,7 @@ export const createBooking = async (req, res) => {
   const initialStatus = normalizeBookingStatus(status);
   if (!initialStatus) {
     return res.status(400).json({
-      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED",
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED, EXPIRED",
     });
   }
 
@@ -92,6 +107,97 @@ export const getBookings = async (req, res) => {
   }
 };
 
+export const getBookingById = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    return res.status(200).json({ booking });
+  } catch (error) {
+    console.error("Failed to fetch booking", error);
+    return res.status(500).json({ message: "Failed to fetch booking" });
+  }
+};
+
+export const checkPaymentAvailability = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const status = booking.status;
+    if (status === "PENDING") {
+      return res.status(200).json({
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: true,
+      });
+    }
+
+    if (status === "CONFIRMED") {
+      return res.status(409).json({
+        message: "Already confirmed",
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: false,
+      });
+    }
+
+    // Treat FAILED as EXPIRED (payment timeout).
+    if (status === "FAILED" || status === "EXPIRED") {
+      const bookingForResponse = { ...booking, status: "EXPIRED" };
+      return res.status(409).json({
+        message: "Booking expired (payment timeout)",
+        booking: bookingForResponse,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status: "EXPIRED",
+        availableForPayment: false,
+      });
+    }
+
+    if (status === "CANCELLED") {
+      return res.status(409).json({
+        message: "Booking cancelled",
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: false,
+      });
+    }
+
+    return res.status(409).json({
+      message: `Payment not allowed for booking status: ${status}`,
+      booking,
+      bookingId: booking.id,
+      bookingReference: booking.bookingReference,
+      status,
+      availableForPayment: false,
+    });
+  } catch (error) {
+    console.error("Failed to check payment availability", error);
+    return res.status(500).json({ message: "Failed to check payment availability" });
+  }
+};
+
 export const createBookingWithItems = async (req, res) => {
   const {
     userId,
@@ -107,7 +213,7 @@ export const createBookingWithItems = async (req, res) => {
   const initialStatus = normalizeBookingStatus(status);
   if (!initialStatus) {
     return res.status(400).json({
-      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED",
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED, EXPIRED",
     });
   }
 

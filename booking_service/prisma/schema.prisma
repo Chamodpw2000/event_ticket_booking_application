@@ -16,6 +16,7 @@ enum BookingStatus {
   CONFIRMED
   FAILED
   CANCELLED
+  EXPIRED
 }
 
 enum TicketStatus {
