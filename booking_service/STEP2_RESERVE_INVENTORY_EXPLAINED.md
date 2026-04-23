@@ -33,27 +33,25 @@ Step Functions stores result & moves to Step 3
 ```javascript
 // lambda/reserveInventory.js
 exports.handler = async (event) => {
-  const { eventId, ticketTypeId, quantity, userId } = event;
+  const { eventId, userId, items } = event;
   
   try {
     // Step Functions passes these values:
     // eventId: 123
-    // ticketTypeId: 456
-    // quantity: 2
     // userId: 789
+    // items: [{ ticketTypeId: 456, quantity: 2 }, { ticketTypeId: 457, quantity: 1 }]
     
-    console.log(`📦 Reserving ${quantity} tickets for user ${userId}`);
+    console.log(`📦 Reserving tickets for user ${userId}`);
     
     const response = await fetch(
-      `${process.env.INVENTORY_SERVICE_URL}/api/inventory-holds/create`,
+      `${process.env.INVENTORY_SERVICE_URL}/inventory/holds`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,        // Which event?
-          ticketTypeId,   // Which ticket type? (VIP, Standard, etc.)
-          quantity,       // How many?
           userId,         // Who is booking?
+          items,          // Multiple ticket types in one booking
           holdExpiryMinutes: 15  // Hold expires in 15 minutes
         })
       }
@@ -65,15 +63,13 @@ exports.handler = async (event) => {
       throw new Error(`Inventory reservation failed: ${data.message}`);
     }
     
-    console.log(`✓ Inventory reserved - Hold ID: ${data.holdId}`);
+    console.log(`✓ Inventory reserved - Holds: ${data.holds?.length ?? 0}`);
     
     // Return data back to Step Functions
     return {
-      holdId: data.holdId,          // Unique hold identifier
-      status: data.status,          // "ACTIVE"
-      expiresAt: data.expiresAt,    // When hold expires
-      totalPrice: data.totalPrice,  // Total booking price (calculated here)
-      availableQuantity: data.availableQuantity
+      expiresAt: data.expiresAt,
+      holds: data.holds,
+      holdIds: Array.isArray(data.holds) ? data.holds.map(h => h.holdId) : []
     };
     
   } catch (error) {
@@ -116,9 +112,9 @@ Example:
 
 Additional columns:
 ┌──────────────┬─────────────┬──────────────────────────┬─────────────────┐
-│ status       │ holdId      │ expiresAt                │ createdAt       │
+│ status       │ id          │ expiresAt                │ createdAt       │
 ├──────────────┼─────────────┼──────────────────────────┼─────────────────┤
-│ "ACTIVE"     │ "HOLD_001"  │ 2026-04-11 15:45:00 UTC  │ 2026-04-11 ...  │
+│ "ACTIVE"     │ 1           │ 2026-04-11 15:45:00 UTC  │ 2026-04-11 ...  │
 └──────────────┴─────────────┴──────────────────────────┴─────────────────┘
 ```
 
@@ -149,8 +145,10 @@ Formula: availableQuantity = totalQuantity - reservedQuantity
 {
   "userId": 789,
   "eventId": 123,
-  "ticketTypeId": 456,
-  "quantity": 2,
+  "items": [
+    { "ticketTypeId": 456, "quantity": 2 },
+    { "ticketTypeId": 457, "quantity": 1 }
+  ],
   "paymentMethod": "credit_card",
   "paymentMethodId": "pm_test_visa",
   "currency": "USD",
@@ -161,25 +159,26 @@ Formula: availableQuantity = totalQuantity - reservedQuantity
 ### Lambda reserveInventory Extracts
 
 ```javascript
-const { eventId, ticketTypeId, quantity, userId } = event;
+const { eventId, userId, items } = event;
 // eventId: 123
-// ticketTypeId: 456
-// quantity: 2
 // userId: 789
+// items: [{ ticketTypeId: 456, quantity: 2 }, { ticketTypeId: 457, quantity: 1 }]
 ```
 
 ### Lambda Makes HTTP Request
 
 ```http
-POST /api/inventory-holds/create HTTP/1.1
+POST /inventory/holds HTTP/1.1
 Host: inventory-service:3004
 Content-Type: application/json
 
 {
   "eventId": 123,
-  "ticketTypeId": 456,
-  "quantity": 2,
   "userId": 789,
+  "items": [
+    { "ticketTypeId": 456, "quantity": 2 },
+    { "ticketTypeId": 457, "quantity": 1 }
+  ],
   "holdExpiryMinutes": 15
 }
 ```
@@ -188,12 +187,39 @@ Content-Type: application/json
 
 ```json
 {
-  "success": true,
-  "holdId": "HOLD_001",
-  "status": "ACTIVE",
-  "expiresAt": "2026-04-11T15:45:00Z",
-  "totalPrice": 200.00,
-  "availableQuantity": 98
+  "expiresAt": "2026-04-11T15:45:00.000Z",
+  "holds": [
+    {
+      "holdId": 1,
+      "ticketTypeId": 456,
+      "quantity": 2,
+      "status": "ACTIVE",
+      "expiresAt": "2026-04-11T15:45:00.000Z",
+      "inventory": {
+        "id": 1,
+        "eventId": 123,
+        "ticketTypeId": 456,
+        "totalQuantity": 100,
+        "availableQuantity": 98,
+        "reservedQuantity": 2
+      }
+    },
+    {
+      "holdId": 2,
+      "ticketTypeId": 457,
+      "quantity": 1,
+      "status": "ACTIVE",
+      "expiresAt": "2026-04-11T15:45:00.000Z",
+      "inventory": {
+        "id": 2,
+        "eventId": 123,
+        "ticketTypeId": 457,
+        "totalQuantity": 50,
+        "availableQuantity": 49,
+        "reservedQuantity": 1
+      }
+    }
+  ]
 }
 ```
 
@@ -201,11 +227,8 @@ Content-Type: application/json
 
 ```javascript
 return {
-  holdId: "HOLD_001",
-  status: "ACTIVE",
-  expiresAt: "2026-04-11T15:45:00Z",
-  totalPrice: 200.00,
-  availableQuantity: 98
+  expiresAt: "2026-04-11T15:45:00.000Z",
+  holdIds: [1, 2]
 };
 ```
 
@@ -253,7 +276,7 @@ exports.handler = async (event) => {
 ### Scenario: Inventory Out of Stock
 
 ```
-Step 2 Lambda calls: POST /api/inventory-holds/create
+Step 2 Lambda calls: POST /inventory/holds
   
 Inventory Service checks:
   Event 123, Ticket Type 456 has only 50 available
@@ -266,7 +289,7 @@ Response: { success: true, holdId: "HOLD_001", ... }
 ### Scenario: Out of Stock (Fails)
 
 ```
-Step 2 Lambda calls: POST /api/inventory-holds/create
+Step 2 Lambda calls: POST /inventory/holds
   
 Inventory Service checks:
   Event 123, Ticket Type 456 has only 1 available
@@ -498,7 +521,7 @@ Changes:
 │ COMPENSATION: RELEASE INVENTORY HOLD                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Compensation Lambda calls:                                          │
-│   PATCH /api/inventory-holds/HOLD_001/release                       │
+│   PATCH /inventory/holds/:holdId/release                            │
 │                                                                     │
 │ InventoryHold: UPDATED                                              │
 │   holdId: "HOLD_001"                                                │
