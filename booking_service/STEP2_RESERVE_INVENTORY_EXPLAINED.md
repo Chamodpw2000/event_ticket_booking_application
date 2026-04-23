@@ -33,27 +33,25 @@ Step Functions stores result & moves to Step 3
 ```javascript
 // lambda/reserveInventory.js
 exports.handler = async (event) => {
-  const { eventId, ticketTypeId, quantity, userId } = event;
+  const { eventId, userId, items } = event;
   
   try {
     // Step Functions passes these values:
     // eventId: 123
-    // ticketTypeId: 456
-    // quantity: 2
     // userId: 789
+    // items: [{ ticketTypeId: 456, quantity: 2 }, { ticketTypeId: 457, quantity: 1 }]
     
-    console.log(`📦 Reserving ${quantity} tickets for user ${userId}`);
+    console.log(`📦 Reserving tickets for user ${userId}`);
     
     const response = await fetch(
-      `${process.env.INVENTORY_SERVICE_URL}/api/inventory-holds/create`,
+      `${process.env.INVENTORY_SERVICE_URL}/inventory/holds`,
       {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           eventId,        // Which event?
-          ticketTypeId,   // Which ticket type? (VIP, Standard, etc.)
-          quantity,       // How many?
           userId,         // Who is booking?
+          items,          // Multiple ticket types in one booking
           holdExpiryMinutes: 15  // Hold expires in 15 minutes
         })
       }
@@ -65,15 +63,13 @@ exports.handler = async (event) => {
       throw new Error(`Inventory reservation failed: ${data.message}`);
     }
     
-    console.log(`✓ Inventory reserved - Hold ID: ${data.holdId}`);
+    console.log(`✓ Inventory reserved - Holds: ${data.holds?.length ?? 0}`);
     
     // Return data back to Step Functions
     return {
-      holdId: data.holdId,          // Unique hold identifier
-      status: data.status,          // "ACTIVE"
-      expiresAt: data.expiresAt,    // When hold expires
-      totalPrice: data.totalPrice,  // Total booking price (calculated here)
-      availableQuantity: data.availableQuantity
+      expiresAt: data.expiresAt,
+      holds: data.holds,
+      holdIds: Array.isArray(data.holds) ? data.holds.map(h => h.holdId) : []
     };
     
   } catch (error) {
@@ -116,9 +112,9 @@ Example:
 
 Additional columns:
 ┌──────────────┬─────────────┬──────────────────────────┬─────────────────┐
-│ status       │ holdId      │ expiresAt                │ createdAt       │
+│ status       │ id          │ expiresAt                │ createdAt       │
 ├──────────────┼─────────────┼──────────────────────────┼─────────────────┤
-│ "ACTIVE"     │ "HOLD_001"  │ 2026-04-11 15:45:00 UTC  │ 2026-04-11 ...  │
+│ "ACTIVE"     │ 1           │ 2026-04-11 15:45:00 UTC  │ 2026-04-11 ...  │
 └──────────────┴─────────────┴──────────────────────────┴─────────────────┘
 ```
 
@@ -149,8 +145,10 @@ Formula: availableQuantity = totalQuantity - reservedQuantity
 {
   "userId": 789,
   "eventId": 123,
-  "ticketTypeId": 456,
-  "quantity": 2,
+  "items": [
+    { "ticketTypeId": 456, "quantity": 2 },
+    { "ticketTypeId": 457, "quantity": 1 }
+  ],
   "paymentMethod": "credit_card",
   "paymentMethodId": "pm_test_visa",
   "currency": "USD",
@@ -161,25 +159,26 @@ Formula: availableQuantity = totalQuantity - reservedQuantity
 ### Lambda reserveInventory Extracts
 
 ```javascript
-const { eventId, ticketTypeId, quantity, userId } = event;
+const { eventId, userId, items } = event;
 // eventId: 123
-// ticketTypeId: 456
-// quantity: 2
 // userId: 789
+// items: [{ ticketTypeId: 456, quantity: 2 }, { ticketTypeId: 457, quantity: 1 }]
 ```
 
 ### Lambda Makes HTTP Request
 
 ```http
-POST /api/inventory-holds/create HTTP/1.1
+POST /inventory/holds HTTP/1.1
 Host: inventory-service:3004
 Content-Type: application/json
 
 {
   "eventId": 123,
-  "ticketTypeId": 456,
-  "quantity": 2,
   "userId": 789,
+  "items": [
+    { "ticketTypeId": 456, "quantity": 2 },
+    { "ticketTypeId": 457, "quantity": 1 }
+  ],
   "holdExpiryMinutes": 15
 }
 ```
@@ -188,12 +187,39 @@ Content-Type: application/json
 
 ```json
 {
-  "success": true,
-  "holdId": "HOLD_001",
-  "status": "ACTIVE",
-  "expiresAt": "2026-04-11T15:45:00Z",
-  "totalPrice": 200.00,
-  "availableQuantity": 98
+  "expiresAt": "2026-04-11T15:45:00.000Z",
+  "holds": [
+    {
+      "holdId": 1,
+      "ticketTypeId": 456,
+      "quantity": 2,
+      "status": "ACTIVE",
+      "expiresAt": "2026-04-11T15:45:00.000Z",
+      "inventory": {
+        "id": 1,
+        "eventId": 123,
+        "ticketTypeId": 456,
+        "totalQuantity": 100,
+        "availableQuantity": 98,
+        "reservedQuantity": 2
+      }
+    },
+    {
+      "holdId": 2,
+      "ticketTypeId": 457,
+      "quantity": 1,
+      "status": "ACTIVE",
+      "expiresAt": "2026-04-11T15:45:00.000Z",
+      "inventory": {
+        "id": 2,
+        "eventId": 123,
+        "ticketTypeId": 457,
+        "totalQuantity": 50,
+        "availableQuantity": 49,
+        "reservedQuantity": 1
+      }
+    }
+  ]
 }
 ```
 
@@ -201,11 +227,8 @@ Content-Type: application/json
 
 ```javascript
 return {
-  holdId: "HOLD_001",
-  status: "ACTIVE",
-  expiresAt: "2026-04-11T15:45:00Z",
-  totalPrice: 200.00,
-  availableQuantity: 98
+  expiresAt: "2026-04-11T15:45:00.000Z",
+  holdIds: [1, 2]
 };
 ```
 
@@ -253,7 +276,7 @@ exports.handler = async (event) => {
 ### Scenario: Inventory Out of Stock
 
 ```
-Step 2 Lambda calls: POST /api/inventory-holds/create
+Step 2 Lambda calls: POST /inventory/holds
   
 Inventory Service checks:
   Event 123, Ticket Type 456 has only 50 available
@@ -266,7 +289,7 @@ Response: { success: true, holdId: "HOLD_001", ... }
 ### Scenario: Out of Stock (Fails)
 
 ```
-Step 2 Lambda calls: POST /api/inventory-holds/create
+Step 2 Lambda calls: POST /inventory/holds
   
 Inventory Service checks:
   Event 123, Ticket Type 456 has only 1 available
@@ -366,7 +389,7 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:31:00 - STEP 4: CREATE BOOKING (SUCCESS)                  │
+│ TIME: 15:31:00 - STEP 4: CREATE BOOKING (SUCCESS)                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Booking Table: NEW RECORD                                           │
 │   bookingId: 1001                                                   │
@@ -385,15 +408,15 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:31:30 - STEP 5: GENERATE TICKETS (SUCCESS)                │
+│ TIME: 15:31:30 - STEP 5: GENERATE TICKETS (SUCCESS)                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Ticket Table: NEW RECORDS (qty 2)                                   │
 │   ticketId: 5001                                                    │
-│   ticketCode: "BK7RQZK2K9-01" ← QR code for entry                  │
+│   ticketCode: "BK7RQZK2K9-01" ← QR code for entry                   │
 │   status: "ISSUED"                                                  │
 │                                                                     │
 │   ticketId: 5002                                                    │
-│   ticketCode: "BK7RQZK2K9-02" ← QR code for entry                  │
+│   ticketCode: "BK7RQZK2K9-02" ← QR code for entry                   │
 │   status: "ISSUED"                                                  │
 │                                                                     │
 │ InventoryHold: UNCHANGED                                            │
@@ -407,11 +430,75 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 
 ---
 
+## Sample Table Changes (Bookings + Payments)
+
+These are **example row snapshots** (before/after) for the tables that typically change in later steps of the saga.
+
+Note: in this repo’s Prisma schema, `payment_service` has a required `bookingId`, so a payment row is usually recorded only once there is a booking identifier available (either by creating a booking first, or by generating/assigning an ID that Step 3 can reference).
+
+### Booking Table (booking_service)
+
+#### BEFORE Step 4 (Create Booking)
+
+**booking table:** (no record yet for this checkout)
+```
+┌────┬─────────┬──────────┬───────────────────┬─────────┬──────────────┬──────────┬────────────────┬─────────────────────┐
+│ id │ user_id │ event_id │ booking_reference │ status  │ total_amount │ currency │ payment_status │ created_at          │
+├────┼─────────┼──────────┼───────────────────┼─────────┼──────────────┼──────────┼────────────────┼─────────────────────┤
+│ —  │ —       │ —        │ —                 │ —       │ —            │ —        │ —              │ —                   │
+└────┴─────────┴──────────┴───────────────────┴─────────┴──────────────┴──────────┴────────────────┴─────────────────────┘
+```
+
+#### AFTER Step 4 (Create Booking)
+
+**booking table:** (NEW RECORD CREATED)
+```
+┌──────┬─────────┬──────────┬───────────────────┬───────────┬──────────────┬──────────┬────────────────┬─────────────────────┐
+│ id   │ user_id │ event_id │ booking_reference │ status    │ total_amount │ currency │ payment_status │ created_at          │
+├──────┼─────────┼──────────┼───────────────────┼───────────┼──────────────┼──────────┼────────────────┼─────────────────────┤
+│ 1001 │ 789     │ 123      │ BK7RQZK2K9        │ CONFIRMED │ 200.00       │ USD      │ COMPLETED      │ 2026-04-11 15:31:00 │
+└──────┴─────────┴──────────┴───────────────────┴───────────┴──────────────┴──────────┴────────────────┴─────────────────────┘
+
+Changes:
+- New booking is created and becomes the source-of-truth for booking state
+- `payment_status` reflects the outcome of the payment step
+```
+
+### Payment Table (payment_service)
+
+#### BEFORE Step 3 (Process Payment)
+
+**Payment table:** (no payment recorded yet for this booking)
+```
+┌────┬───────────┬────────┬────────┬────────┬──────────┬──────────────┬──────────────┬───────────────────┬─────────┬─────────────────────┐
+│ id │ bookingId │ userId │ eventId│ amount │ currency │ paymentMethod │ providerName │ providerReference │ status  │ createdAt           │
+├────┼───────────┼────────┼────────┼────────┼──────────┼──────────────┼──────────────┼───────────────────┼─────────┼─────────────────────┤
+│ —  │ —         │ —      │ —      │ —      │ —        │ —            │ —            │ —                 │ —       │ —                   │
+└────┴───────────┴────────┴────────┴────────┴──────────┴──────────────┴──────────────┴───────────────────┴─────────┴─────────────────────┘
+```
+
+#### AFTER Step 3 (Process Payment - SUCCESS)
+
+**Payment table:** (NEW RECORD CREATED)
+```
+┌─────┬───────────┬────────┬────────┬────────┬──────────┬──────────────┬──────────────┬───────────────────┬───────────┬─────────────────────┐
+│ id  │ bookingId │ userId │ eventId│ amount │ currency │ paymentMethod │ providerName │ providerReference │ status    │ createdAt           │
+├─────┼───────────┼────────┼────────┼────────┼──────────┼──────────────┼──────────────┼───────────────────┼───────────┼─────────────────────┤
+│ 999 │ 1001      │ 789    │ 123    │ 200.00 │ USD      │ credit_card  │ stripe       │ pi_3P...           │ COMPLETED │ 2026-04-11 15:30:30 │
+└─────┴───────────┴────────┴────────┴────────┴──────────┴──────────────┴──────────────┴───────────────────┴───────────┴─────────────────────┘
+
+Changes:
+- Payment is tied to the booking via `bookingId`
+- `providerReference` stores the external provider’s reference (if applicable)
+```
+
+---
+
 ## If Payment Fails (Compensation)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:30:05 - STEP 2: RESERVE INVENTORY (SUCCESS)               │
+│ TIME: 15:30:05 - STEP 2: RESERVE INVENTORY (SUCCESS)                │
 ├─────────────────────────────────────────────────────────────────────┤
 │ InventoryHold: CREATED                                              │
 │   holdId: "HOLD_001"                                                │
@@ -434,7 +521,7 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 │ COMPENSATION: RELEASE INVENTORY HOLD                                │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Compensation Lambda calls:                                          │
-│   PATCH /api/inventory-holds/HOLD_001/release                       │
+│   PATCH /inventory/holds/:holdId/release                            │
 │                                                                     │
 │ InventoryHold: UPDATED                                              │
 │   holdId: "HOLD_001"                                                │
@@ -492,6 +579,40 @@ CREATE TABLE inventory_hold (
   INDEX(userId),
   INDEX(status),
   INDEX(expiresAt)
+);
+```
+
+### Booking Table (booking_service)
+```sql
+CREATE TABLE booking (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  event_id INT NOT NULL,
+  booking_reference VARCHAR(100) UNIQUE NOT NULL,
+  status ENUM('PENDING','CONFIRMED','FAILED','CANCELLED') NOT NULL,
+  total_amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(3) NOT NULL,
+  payment_status VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Payment Table (payment_service)
+```sql
+CREATE TABLE Payment (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  bookingId INT NOT NULL,
+  userId INT NOT NULL,
+  eventId INT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(255) NOT NULL,
+  paymentMethod VARCHAR(255) NOT NULL,
+  providerName VARCHAR(255) NOT NULL,
+  providerReference VARCHAR(255),
+  status VARCHAR(255) NOT NULL,
+  createdAt TIMESTAMP DEFAULT NOW(),
+  updatedAt TIMESTAMP DEFAULT NOW()
 );
 ```
 

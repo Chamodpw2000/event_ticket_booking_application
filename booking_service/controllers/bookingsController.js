@@ -1,5 +1,34 @@
 import { prisma } from "../lib/prismaClient.js";
 
+const BOOKING_STATUSES = new Set([
+  "PENDING",
+  "CONFIRMED",
+  "FAILED",
+  "CANCELLED",
+  "EXPIRED",
+]);
+
+const parsePositiveInt = (value) => {
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    return null;
+  }
+
+  return parsed;
+};
+
+const normalizeBookingStatus = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return "PENDING";
+  }
+
+  if (typeof value !== "string" || !BOOKING_STATUSES.has(value)) {
+    return null;
+  }
+
+  return value;
+};
+
 export const createBooking = async (req, res) => {
   const {
     userId,
@@ -10,6 +39,13 @@ export const createBooking = async (req, res) => {
     currency,
     paymentStatus,
   } = req.body;
+
+  const initialStatus = normalizeBookingStatus(status);
+  if (!initialStatus) {
+    return res.status(400).json({
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED, EXPIRED",
+    });
+  }
 
   if (
     userId === undefined ||
@@ -26,16 +62,29 @@ export const createBooking = async (req, res) => {
   }
 
   try {
-    const booking = await prisma.booking.create({
-      data: {
-        userId,
-        eventId,
-        bookingReference,
-        status,
-        totalAmount: Number(totalAmount).toFixed(2),
-        currency,
-        paymentStatus,
-      },
+    const booking = await prisma.$transaction(async (tx) => {
+      const createdBooking = await tx.booking.create({
+        data: {
+          userId,
+          eventId,
+          bookingReference,
+          status: initialStatus,
+          totalAmount: Number(totalAmount).toFixed(2),
+          currency,
+          paymentStatus,
+        },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: createdBooking.id,
+          oldStatus: initialStatus,
+          newStatus: initialStatus,
+          reason: "Booking created",
+        },
+      });
+
+      return createdBooking;
     });
 
     return res.status(201).json(booking);
@@ -58,6 +107,173 @@ export const getBookings = async (req, res) => {
   }
 };
 
+export const getBookingById = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    return res.status(200).json({ booking });
+  } catch (error) {
+    console.error("Failed to fetch booking", error);
+    return res.status(500).json({ message: "Failed to fetch booking" });
+  }
+};
+
+export const confirmBooking = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  const rawReason = req.body?.reason;
+  const reason =
+    typeof rawReason === "string" && rawReason.trim() ? rawReason.trim().slice(0, 255) : null;
+
+  const paymentStatus = "PAID";
+
+  try {
+    const result = await prisma.$transaction(async (tx) => {
+      const booking = await tx.booking.findUnique({ where: { id: bookingId } });
+      if (!booking) {
+        const error = new Error("BOOKING_NOT_FOUND");
+        error.code = "BOOKING_NOT_FOUND";
+        throw error;
+      }
+
+      if (booking.status === "CONFIRMED") {
+        return { booking, changed: false };
+      }
+
+      if (booking.status === "CANCELLED") {
+        const error = new Error("BOOKING_CANCELLED");
+        error.code = "BOOKING_CANCELLED";
+        throw error;
+      }
+
+      if (booking.status === "FAILED" || booking.status === "EXPIRED") {
+        const error = new Error("BOOKING_EXPIRED");
+        error.code = "BOOKING_EXPIRED";
+        throw error;
+      }
+
+      const updatedBooking = await tx.booking.update({
+        where: { id: bookingId },
+        data: { status: "CONFIRMED", paymentStatus },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: updatedBooking.id,
+          oldStatus: booking.status,
+          newStatus: "CONFIRMED",
+          reason: reason ?? "Booking confirmed",
+        },
+      });
+
+      return { booking: updatedBooking, changed: true };
+    });
+
+    return res.status(200).json({
+      booking: result.booking,
+      changed: result.changed,
+    });
+  } catch (error) {
+    if (error?.code === "BOOKING_NOT_FOUND") {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    if (error?.code === "BOOKING_CANCELLED") {
+      return res.status(409).json({ message: "Booking is CANCELLED" });
+    }
+
+    if (error?.code === "BOOKING_EXPIRED") {
+      return res.status(409).json({ message: "Booking is EXPIRED" });
+    }
+
+    console.error("Failed to confirm booking", error);
+    return res.status(500).json({ message: "Failed to confirm booking" });
+  }
+};
+
+export const checkPaymentAvailability = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    const booking = await prisma.booking.findUnique({ where: { id: bookingId } });
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    const status = booking.status;
+    if (status === "PENDING") {
+      return res.status(200).json({
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: true,
+      });
+    }
+
+    if (status === "CONFIRMED") {
+      return res.status(409).json({
+        message: "Already confirmed",
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: false,
+      });
+    }
+
+    // Treat FAILED as EXPIRED (payment timeout).
+    if (status === "FAILED" || status === "EXPIRED") {
+      const bookingForResponse = { ...booking, status: "EXPIRED" };
+      return res.status(409).json({
+        message: "Booking expired (payment timeout)",
+        booking: bookingForResponse,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status: "EXPIRED",
+        availableForPayment: false,
+      });
+    }
+
+    if (status === "CANCELLED") {
+      return res.status(409).json({
+        message: "Booking cancelled",
+        booking,
+        bookingId: booking.id,
+        bookingReference: booking.bookingReference,
+        status,
+        availableForPayment: false,
+      });
+    }
+
+    return res.status(409).json({
+      message: `Payment not allowed for booking status: ${status}`,
+      booking,
+      bookingId: booking.id,
+      bookingReference: booking.bookingReference,
+      status,
+      availableForPayment: false,
+    });
+  } catch (error) {
+    console.error("Failed to check payment availability", error);
+    return res.status(500).json({ message: "Failed to check payment availability" });
+  }
+};
+
 export const createBookingWithItems = async (req, res) => {
   const {
     userId,
@@ -69,6 +285,13 @@ export const createBookingWithItems = async (req, res) => {
     paymentStatus,
     items,
   } = req.body;
+
+  const initialStatus = normalizeBookingStatus(status);
+  if (!initialStatus) {
+    return res.status(400).json({
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED, EXPIRED",
+    });
+  }
 
   if (
     userId === undefined ||
@@ -111,10 +334,19 @@ export const createBookingWithItems = async (req, res) => {
           userId,
           eventId,
           bookingReference,
-          status,
+          status: initialStatus,
           totalAmount: Number(totalAmount).toFixed(2),
           currency,
           paymentStatus,
+        },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: booking.id,
+          oldStatus: initialStatus,
+          newStatus: initialStatus,
+          reason: "Booking created",
         },
       });
 

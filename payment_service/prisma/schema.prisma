@@ -41,7 +41,6 @@ model PaymentTransaction {
   transactionType   String
   providerReference String?
   status            String
-  responsePayload   Json?
   createdAt         DateTime @default(now())
 
   payment Payment @relation(fields: [paymentId], references: [id], onDelete: Cascade)
@@ -54,7 +53,7 @@ model PaymentTransaction {
 
 model Refund {
   id        Int      @id @default(autoincrement())
-  paymentId Int
+  paymentId Int      @unique
   bookingId Int
   amount    Decimal  @db.Decimal(10, 2)
   reason    String?
