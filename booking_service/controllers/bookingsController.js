@@ -1,5 +1,19 @@
 import { prisma } from "../lib/prismaClient.js";
 
+const BOOKING_STATUSES = new Set(["PENDING", "CONFIRMED", "FAILED", "CANCELLED"]);
+
+const normalizeBookingStatus = (value) => {
+  if (value === undefined || value === null || value === "") {
+    return "PENDING";
+  }
+
+  if (typeof value !== "string" || !BOOKING_STATUSES.has(value)) {
+    return null;
+  }
+
+  return value;
+};
+
 export const createBooking = async (req, res) => {
   const {
     userId,
@@ -10,6 +24,13 @@ export const createBooking = async (req, res) => {
     currency,
     paymentStatus,
   } = req.body;
+
+  const initialStatus = normalizeBookingStatus(status);
+  if (!initialStatus) {
+    return res.status(400).json({
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED",
+    });
+  }
 
   if (
     userId === undefined ||
@@ -26,16 +47,29 @@ export const createBooking = async (req, res) => {
   }
 
   try {
-    const booking = await prisma.booking.create({
-      data: {
-        userId,
-        eventId,
-        bookingReference,
-        status,
-        totalAmount: Number(totalAmount).toFixed(2),
-        currency,
-        paymentStatus,
-      },
+    const booking = await prisma.$transaction(async (tx) => {
+      const createdBooking = await tx.booking.create({
+        data: {
+          userId,
+          eventId,
+          bookingReference,
+          status: initialStatus,
+          totalAmount: Number(totalAmount).toFixed(2),
+          currency,
+          paymentStatus,
+        },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: createdBooking.id,
+          oldStatus: initialStatus,
+          newStatus: initialStatus,
+          reason: "Booking created",
+        },
+      });
+
+      return createdBooking;
     });
 
     return res.status(201).json(booking);
@@ -69,6 +103,13 @@ export const createBookingWithItems = async (req, res) => {
     paymentStatus,
     items,
   } = req.body;
+
+  const initialStatus = normalizeBookingStatus(status);
+  if (!initialStatus) {
+    return res.status(400).json({
+      message: "status must be one of PENDING, CONFIRMED, FAILED, CANCELLED",
+    });
+  }
 
   if (
     userId === undefined ||
@@ -111,10 +152,19 @@ export const createBookingWithItems = async (req, res) => {
           userId,
           eventId,
           bookingReference,
-          status,
+          status: initialStatus,
           totalAmount: Number(totalAmount).toFixed(2),
           currency,
           paymentStatus,
+        },
+      });
+
+      await tx.bookingStatusHistory.create({
+        data: {
+          bookingId: booking.id,
+          oldStatus: initialStatus,
+          newStatus: initialStatus,
+          reason: "Booking created",
         },
       });
 

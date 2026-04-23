@@ -6,7 +6,10 @@ import {
   createInventoryHold,
   confirmInventoryHoldForBooking,
 } from "../controllers/inventoryBookingController.js";
-import { releaseInventoryHold } from "../controllers/inventoryCompensationController.js";
+import {
+  releaseInventoryHold,
+  releaseInventoryHolds,
+} from "../controllers/inventoryCompensationController.js";
 
 const inventoryRouter = Router();
 
@@ -18,6 +21,9 @@ inventoryRouter.post("/holds", createInventoryHold);
 
 // Confirm an inventory hold after booking/payment succeeds.
 inventoryRouter.patch("/holds/:holdId/confirm", confirmInventoryHoldForBooking);
+
+// Release multiple holds in one call.
+inventoryRouter.patch("/holds/release", releaseInventoryHolds);
 
 // Release an inventory hold (payment failed / cancel).
 inventoryRouter.patch("/holds/:holdId/release", releaseInventoryHold);
