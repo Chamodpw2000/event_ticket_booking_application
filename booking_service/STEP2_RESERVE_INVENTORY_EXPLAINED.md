@@ -366,7 +366,7 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:31:00 - STEP 4: CREATE BOOKING (SUCCESS)                  │
+│ TIME: 15:31:00 - STEP 4: CREATE BOOKING (SUCCESS)                   │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Booking Table: NEW RECORD                                           │
 │   bookingId: 1001                                                   │
@@ -385,15 +385,15 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 └─────────────────────────────────────────────────────────────────────┘
 
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:31:30 - STEP 5: GENERATE TICKETS (SUCCESS)                │
+│ TIME: 15:31:30 - STEP 5: GENERATE TICKETS (SUCCESS)                 │
 ├─────────────────────────────────────────────────────────────────────┤
 │ Ticket Table: NEW RECORDS (qty 2)                                   │
 │   ticketId: 5001                                                    │
-│   ticketCode: "BK7RQZK2K9-01" ← QR code for entry                  │
+│   ticketCode: "BK7RQZK2K9-01" ← QR code for entry                   │
 │   status: "ISSUED"                                                  │
 │                                                                     │
 │   ticketId: 5002                                                    │
-│   ticketCode: "BK7RQZK2K9-02" ← QR code for entry                  │
+│   ticketCode: "BK7RQZK2K9-02" ← QR code for entry                   │
 │   status: "ISSUED"                                                  │
 │                                                                     │
 │ InventoryHold: UNCHANGED                                            │
@@ -407,11 +407,75 @@ UPDATE EventInventory SET reservedQuantity = reservedQuantity - quantity
 
 ---
 
+## Sample Table Changes (Bookings + Payments)
+
+These are **example row snapshots** (before/after) for the tables that typically change in later steps of the saga.
+
+Note: in this repo’s Prisma schema, `payment_service` has a required `bookingId`, so a payment row is usually recorded only once there is a booking identifier available (either by creating a booking first, or by generating/assigning an ID that Step 3 can reference).
+
+### Booking Table (booking_service)
+
+#### BEFORE Step 4 (Create Booking)
+
+**booking table:** (no record yet for this checkout)
+```
+┌────┬─────────┬──────────┬───────────────────┬─────────┬──────────────┬──────────┬────────────────┬─────────────────────┐
+│ id │ user_id │ event_id │ booking_reference │ status  │ total_amount │ currency │ payment_status │ created_at          │
+├────┼─────────┼──────────┼───────────────────┼─────────┼──────────────┼──────────┼────────────────┼─────────────────────┤
+│ —  │ —       │ —        │ —                 │ —       │ —            │ —        │ —              │ —                   │
+└────┴─────────┴──────────┴───────────────────┴─────────┴──────────────┴──────────┴────────────────┴─────────────────────┘
+```
+
+#### AFTER Step 4 (Create Booking)
+
+**booking table:** (NEW RECORD CREATED)
+```
+┌──────┬─────────┬──────────┬───────────────────┬───────────┬──────────────┬──────────┬────────────────┬─────────────────────┐
+│ id   │ user_id │ event_id │ booking_reference │ status    │ total_amount │ currency │ payment_status │ created_at          │
+├──────┼─────────┼──────────┼───────────────────┼───────────┼──────────────┼──────────┼────────────────┼─────────────────────┤
+│ 1001 │ 789     │ 123      │ BK7RQZK2K9        │ CONFIRMED │ 200.00       │ USD      │ COMPLETED      │ 2026-04-11 15:31:00 │
+└──────┴─────────┴──────────┴───────────────────┴───────────┴──────────────┴──────────┴────────────────┴─────────────────────┘
+
+Changes:
+- New booking is created and becomes the source-of-truth for booking state
+- `payment_status` reflects the outcome of the payment step
+```
+
+### Payment Table (payment_service)
+
+#### BEFORE Step 3 (Process Payment)
+
+**Payment table:** (no payment recorded yet for this booking)
+```
+┌────┬───────────┬────────┬────────┬────────┬──────────┬──────────────┬──────────────┬───────────────────┬─────────┬─────────────────────┐
+│ id │ bookingId │ userId │ eventId│ amount │ currency │ paymentMethod │ providerName │ providerReference │ status  │ createdAt           │
+├────┼───────────┼────────┼────────┼────────┼──────────┼──────────────┼──────────────┼───────────────────┼─────────┼─────────────────────┤
+│ —  │ —         │ —      │ —      │ —      │ —        │ —            │ —            │ —                 │ —       │ —                   │
+└────┴───────────┴────────┴────────┴────────┴──────────┴──────────────┴──────────────┴───────────────────┴─────────┴─────────────────────┘
+```
+
+#### AFTER Step 3 (Process Payment - SUCCESS)
+
+**Payment table:** (NEW RECORD CREATED)
+```
+┌─────┬───────────┬────────┬────────┬────────┬──────────┬──────────────┬──────────────┬───────────────────┬───────────┬─────────────────────┐
+│ id  │ bookingId │ userId │ eventId│ amount │ currency │ paymentMethod │ providerName │ providerReference │ status    │ createdAt           │
+├─────┼───────────┼────────┼────────┼────────┼──────────┼──────────────┼──────────────┼───────────────────┼───────────┼─────────────────────┤
+│ 999 │ 1001      │ 789    │ 123    │ 200.00 │ USD      │ credit_card  │ stripe       │ pi_3P...           │ COMPLETED │ 2026-04-11 15:30:30 │
+└─────┴───────────┴────────┴────────┴────────┴──────────┴──────────────┴──────────────┴───────────────────┴───────────┴─────────────────────┘
+
+Changes:
+- Payment is tied to the booking via `bookingId`
+- `providerReference` stores the external provider’s reference (if applicable)
+```
+
+---
+
 ## If Payment Fails (Compensation)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────┐
-│ TIME: 15:30:05 - STEP 2: RESERVE INVENTORY (SUCCESS)               │
+│ TIME: 15:30:05 - STEP 2: RESERVE INVENTORY (SUCCESS)                │
 ├─────────────────────────────────────────────────────────────────────┤
 │ InventoryHold: CREATED                                              │
 │   holdId: "HOLD_001"                                                │
@@ -492,6 +556,40 @@ CREATE TABLE inventory_hold (
   INDEX(userId),
   INDEX(status),
   INDEX(expiresAt)
+);
+```
+
+### Booking Table (booking_service)
+```sql
+CREATE TABLE booking (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  user_id INT NOT NULL,
+  event_id INT NOT NULL,
+  booking_reference VARCHAR(100) UNIQUE NOT NULL,
+  status ENUM('PENDING','CONFIRMED','FAILED','CANCELLED') NOT NULL,
+  total_amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(3) NOT NULL,
+  payment_status VARCHAR(50) NOT NULL,
+  created_at TIMESTAMP DEFAULT NOW(),
+  updated_at TIMESTAMP DEFAULT NOW()
+);
+```
+
+### Payment Table (payment_service)
+```sql
+CREATE TABLE Payment (
+  id INT PRIMARY KEY AUTO_INCREMENT,
+  bookingId INT NOT NULL,
+  userId INT NOT NULL,
+  eventId INT NOT NULL,
+  amount DECIMAL(10, 2) NOT NULL,
+  currency VARCHAR(255) NOT NULL,
+  paymentMethod VARCHAR(255) NOT NULL,
+  providerName VARCHAR(255) NOT NULL,
+  providerReference VARCHAR(255),
+  status VARCHAR(255) NOT NULL,
+  createdAt TIMESTAMP DEFAULT NOW(),
+  updatedAt TIMESTAMP DEFAULT NOW()
 );
 ```
 
