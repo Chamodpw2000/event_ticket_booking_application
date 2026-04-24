@@ -351,3 +351,34 @@ export const confirmInventoryHoldForBooking = async (req, res) => {
 		return res.status(500).json({ message: "Failed to confirm inventory hold" });
 	}
 };
+
+// Fetch all active holds for a booking.
+export const getHoldsForBooking = async (req, res) => {
+	const bookingId = parsePositiveInt(req.params.bookingId);
+	if (!bookingId) {
+		return res.status(400).json({ message: "bookingId must be a positive integer" });
+	}
+
+	try {
+		const holds = await prisma.inventoryHold.findMany({
+			where: { bookingId, status: "ACTIVE" },
+			orderBy: { createdAt: "asc" },
+		});
+
+		return res.status(200).json({
+			bookingId,
+			holds: holds.map((h) => ({
+				id: h.id,
+				inventoryId: h.inventoryId,
+				eventId: h.eventId,
+				ticketTypeId: h.ticketTypeId,
+				quantity: h.quantity,
+				status: h.status,
+				expiresAt: h.expiresAt,
+			})),
+		});
+	} catch (error) {
+		console.error("Failed to fetch holds for booking", error);
+		return res.status(500).json({ message: "Failed to fetch holds for booking" });
+	}
+};

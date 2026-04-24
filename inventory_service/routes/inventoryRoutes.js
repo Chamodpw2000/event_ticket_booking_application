@@ -5,6 +5,7 @@ import {
 import {
   createInventoryHold,
   confirmInventoryHoldForBooking,
+  getHoldsForBooking,
 } from "../controllers/inventoryBookingController.js";
 import {
   releaseInventoryHold,
@@ -18,6 +19,9 @@ inventoryRouter.post("/records", createInventoryRecord);
 
 // Create an inventory hold (reserve tickets temporarily).
 inventoryRouter.post("/holds", createInventoryHold);
+
+// Fetch all active holds for a booking.
+inventoryRouter.get("/booking/:bookingId/holds", getHoldsForBooking);
 
 // Confirm an inventory hold after booking/payment succeeds.
 inventoryRouter.patch("/holds/:holdId/confirm", confirmInventoryHoldForBooking);

@@ -6,6 +6,7 @@ import {
   confirmBooking,
   getBookingById,
   getBookings,
+  startCreateBookingSaga,
 } from "../controllers/bookingsController.js";
 import { cancelBooking } from "../controllers/bookingCompensationController.js";
 
@@ -13,6 +14,8 @@ const bookingsRouter = Router();
 
 bookingsRouter.post("/", createBooking);
 bookingsRouter.post("/with-items", createBookingWithItems);
+// SAGA: create booking + reserve inventory (Step Functions).
+bookingsRouter.post("/saga", startCreateBookingSaga);
 bookingsRouter.get("/", getBookings);
 bookingsRouter.get("/:bookingId/payment-availability", checkPaymentAvailability);
 bookingsRouter.get("/:bookingId", getBookingById);
