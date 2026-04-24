@@ -45,3 +45,29 @@ export const createInventoryRecord = async (req, res) => {
     return res.status(500).json({ message: "Failed to create inventory record" });
   }
 };
+
+export const getHoldIdsForBooking = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    // Fetch relevant hold IDs for the given booking
+    const holds = await prisma.inventoryHold.findMany({
+      where: { bookingId },
+      select: { id: true },
+    });
+
+    const holdIds = holds.map((hold) => hold.id);
+
+    return res.status(200).json({
+      bookingId,
+      holdIds,
+    });
+  } catch (error) {
+    console.error("Failed to fetch hold IDs for booking", error);
+    return res.status(500).json({ message: "Failed to fetch hold IDs for booking" });
+  }
+};

@@ -1,10 +1,12 @@
 import { Router } from "express";
 import {
   createInventoryRecord,
+  getHoldIdsForBooking,
 } from "../controllers/inventoryController.js";
 import {
   createInventoryHold,
   confirmInventoryHoldForBooking,
+  getHoldsForBooking,
 } from "../controllers/inventoryBookingController.js";
 import {
   releaseInventoryHold,
@@ -13,11 +15,17 @@ import {
 
 const inventoryRouter = Router();
 
+// Get an array of hold IDs for a given booking.
+inventoryRouter.get("/booking/:bookingId/hold-ids", getHoldIdsForBooking);
+
 // Create an inventory record for an event ticket type.
 inventoryRouter.post("/records", createInventoryRecord);
 
 // Create an inventory hold (reserve tickets temporarily).
 inventoryRouter.post("/holds", createInventoryHold);
+
+// Fetch all active holds for a booking.
+inventoryRouter.get("/booking/:bookingId/holds", getHoldsForBooking);
 
 // Confirm an inventory hold after booking/payment succeeds.
 inventoryRouter.patch("/holds/:holdId/confirm", confirmInventoryHoldForBooking);
