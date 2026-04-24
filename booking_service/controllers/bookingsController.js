@@ -591,3 +591,83 @@ export const startCreateBookingSaga = async (req, res) => {
     });
   }
 };
+
+/**
+ * expireStalePendingBookings
+ *
+ * Scans all bookings created within the last 1 hour, identifies those whose
+ * status is still PENDING and whose createdAt is more than 15 minutes ago,
+ * transitions them to EXPIRED, and writes a BookingStatusHistory record for
+ * each one.
+ *
+ * Returns an array of the booking IDs that were expired.
+ */
+export const expireStalePendingBookings = async (req, res) => {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);   // now - 1 h
+  const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000); // now - 15 min
+
+  try {
+    // 1. Fetch all bookings created within the past hour that are still PENDING.
+    const recentPendingBookings = await prisma.booking.findMany({
+      where: {
+        status: "PENDING",
+        createdAt: {
+          gte: oneHourAgo, // created no earlier than 1 hour ago
+        },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+      },
+    });
+
+    // 2. Keep only the ones whose createdAt is older than 15 minutes.
+    const staleBookings = recentPendingBookings.filter(
+      (booking) => booking.createdAt <= fifteenMinutesAgo
+    );
+
+    if (staleBookings.length === 0) {
+      return res.status(200).json({
+        message: "No stale pending bookings found",
+        expiredBookingIds: [],
+        expiredCount: 0,
+      });
+    }
+
+    const staleIds = staleBookings.map((b) => b.id);
+
+    // 3. Expire them in a single transaction: bulk-update + insert history rows.
+    await prisma.$transaction(async (tx) => {
+      // Bulk status update
+      await tx.booking.updateMany({
+        where: { id: { in: staleIds } },
+        data: { status: "EXPIRED" },
+      });
+
+      // Insert a BookingStatusHistory record for every expired booking
+      await tx.bookingStatusHistory.createMany({
+        data: staleIds.map((id) => ({
+          bookingId: id,
+          oldStatus: "PENDING",
+          newStatus: "EXPIRED",
+          reason: "Booking expired: payment not completed within 15 minutes",
+        })),
+      });
+    });
+
+    console.log(
+      `[expireStalePendingBookings] Expired ${staleIds.length} booking(s): ${staleIds.join(", ")}`
+    );
+
+    return res.status(200).json({
+      message: `${staleIds.length} booking(s) expired successfully`,
+      expiredBookingIds: staleIds,
+      expiredCount: staleIds.length,
+    });
+  } catch (error) {
+    console.error("[expireStalePendingBookings] Failed to expire stale bookings", error);
+    return res.status(500).json({ message: "Failed to expire stale pending bookings" });
+  }
+};
