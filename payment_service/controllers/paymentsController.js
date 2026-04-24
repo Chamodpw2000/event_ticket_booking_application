@@ -1,4 +1,13 @@
 import { prisma } from "../lib/prismaClient.js";
+import {
+  SFNClient,
+  StartExecutionCommand,
+  StartSyncExecutionCommand,
+} from "@aws-sdk/client-sfn";
+
+const sfnClient = new SFNClient({
+  region: process.env.AWS_REGION || "us-east-1",
+});
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -6,6 +15,82 @@ const parsePositiveInt = (value) => {
     return null;
   }
   return parsed;
+};
+
+const isStepFunctionsStateMachineArn = (value) => {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  // Expected: arn:aws:states:<region>:<accountId>:stateMachine:<name>
+  // (also supports aws-us-gov / aws-cn partitions)
+  const arnPattern = /^arn:(aws|aws-us-gov|aws-cn):states:[a-z0-9-]+:\d{12}:stateMachine:[A-Za-z0-9-_]+$/;
+  return arnPattern.test(trimmed);
+};
+
+const isSyncExecutionNotSupportedError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  const name = String(error?.name || error?.Code || "");
+  return (
+    message.includes("operation is not supported") ||
+    message.includes("not supported by this type of state machine") ||
+    name.includes("StateMachineTypeNotSupported")
+  );
+};
+
+const validateMakePaymentSagaPayload = (payload) => {
+  const { bookingId, paymentMethod, providerName } = payload ?? {};
+
+  const parsedBookingId = parsePositiveInt(bookingId);
+  if (!parsedBookingId) return "bookingId must be a positive integer";
+
+  if (!paymentMethod || typeof paymentMethod !== "string" || !paymentMethod.trim()) {
+    return "paymentMethod is required";
+  }
+
+  if (!providerName || typeof providerName !== "string" || !providerName.trim()) {
+    return "providerName is required";
+  }
+
+  return null;
+};
+
+const buildMakePaymentSagaInput = (payload) => {
+  const {
+    bookingId,
+    paymentMethod,
+    providerName,
+    providerReference,
+    transactionType,
+  } = payload;
+
+  return {
+    bookingId: parsePositiveInt(bookingId),
+    paymentMethod: paymentMethod.trim(),
+    providerName: providerName.trim(),
+    providerReference:
+      typeof providerReference === "string" && providerReference.trim() ? providerReference.trim() : undefined,
+    transactionType:
+      typeof transactionType === "string" && transactionType.trim() ? transactionType.trim() : undefined,
+  };
+};
+
+const startSagaAsync = async ({ stateMachineArn, sagaInput, executionName }) => {
+  const command = new StartExecutionCommand({
+    stateMachineArn,
+    input: JSON.stringify(sagaInput),
+    name: executionName,
+  });
+
+  return sfnClient.send(command);
+};
+
+const startSagaSync = async ({ stateMachineArn, sagaInput, executionName }) => {
+  const command = new StartSyncExecutionCommand({
+    stateMachineArn,
+    input: JSON.stringify(sagaInput),
+    name: executionName,
+  });
+
+  return sfnClient.send(command);
 };
 
 
@@ -206,5 +291,94 @@ export const refundPayment = async (req, res) => {
 
     console.error("Failed to refund payment", error);
     return res.status(500).json({ message: "Failed to refund payment" });
+  }
+};
+
+export const startMakePaymentSaga = async (req, res) => {
+  // Default to synchronous execution for EXPRESS state machines.
+  // Override to async by passing ?mode=async or waitForResult=false.
+  const forceAsync =
+    req.query.mode === "async" ||
+    req.body?.mode === "async" ||
+    req.query.waitForResult === "false" ||
+    req.body?.waitForResult === false;
+
+  const stateMachineArn = process.env.STATE_MACHINE_ARN?.trim();
+  if (!stateMachineArn) {
+    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+  }
+
+  if (!isStepFunctionsStateMachineArn(stateMachineArn)) {
+    return res.status(500).json({
+      message:
+        "STATE_MACHINE_ARN must be a Step Functions state machine ARN (arn:aws:states:...:stateMachine:...), not an IAM role ARN.",
+      configuredValue: stateMachineArn,
+    });
+  }
+
+  const validationError = validateMakePaymentSagaPayload(req.body);
+  if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  try {
+    const sagaInput = buildMakePaymentSagaInput(req.body);
+    const executionName = `payment-saga-${sagaInput.bookingId}-${Date.now()}`.slice(0, 80);
+
+    if (forceAsync) {
+      const result = await startSagaAsync({ stateMachineArn, sagaInput, executionName });
+      return res.status(202).json({
+        message: "Saga execution started",
+        executionArn: result.executionArn,
+        startDate: result.startDate,
+        mode: "async",
+      });
+    }
+
+    let syncResult;
+    try {
+      syncResult = await startSagaSync({ stateMachineArn, sagaInput, executionName });
+    } catch (error) {
+      if (isSyncExecutionNotSupportedError(error)) {
+        const result = await startSagaAsync({ stateMachineArn, sagaInput, executionName });
+        return res.status(202).json({
+          message:
+            "State machine does not support synchronous execution (StartSyncExecution). Started saga asynchronously instead.",
+          executionArn: result.executionArn,
+          startDate: result.startDate,
+          mode: "async",
+          note: "Deploy this workflow as EXPRESS to use waitForResult=true.",
+        });
+      }
+
+      throw error;
+    }
+
+    const parsedOutput = syncResult.output ? JSON.parse(syncResult.output) : null;
+
+    if (syncResult.status !== "SUCCEEDED") {
+      return res.status(500).json({
+        message: "Saga execution failed",
+        executionArn: syncResult.executionArn,
+        status: syncResult.status,
+        error: syncResult.error,
+        cause: syncResult.cause,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Saga execution completed",
+      executionArn: syncResult.executionArn,
+      status: syncResult.status,
+      paymentId: parsedOutput?.paymentId ?? null,
+      result: parsedOutput,
+      mode: "sync",
+    });
+  } catch (error) {
+    console.error("Failed to start make payment saga", error);
+    return res.status(500).json({
+      message: "Failed to start make payment saga",
+      error: error?.message,
+    });
   }
 };

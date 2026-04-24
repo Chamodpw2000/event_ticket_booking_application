@@ -1,4 +1,13 @@
 import { prisma } from "../lib/prismaClient.js";
+import {
+  SFNClient,
+  StartExecutionCommand,
+  StartSyncExecutionCommand,
+} from "@aws-sdk/client-sfn";
+
+const sfnClient = new SFNClient({
+  region: process.env.AWS_REGION || "us-east-1",
+});
 
 const BOOKING_STATUSES = new Set([
   "PENDING",
@@ -27,6 +36,97 @@ const normalizeBookingStatus = (value) => {
   }
 
   return value;
+};
+
+const isStepFunctionsStateMachineArn = (value) => {
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  // Expected: arn:aws:states:<region>:<accountId>:stateMachine:<name>
+  return trimmed.startsWith("arn:") && trimmed.includes(":states:") && trimmed.includes(":stateMachine:");
+};
+
+const isSyncExecutionNotSupportedError = (error) => {
+  const message = String(error?.message || "").toLowerCase();
+  const name = String(error?.name || error?.Code || "");
+  return (
+    message.includes("operation is not supported") ||
+    message.includes("not supported by this type of state machine") ||
+    name.includes("StateMachineTypeNotSupported")
+  );
+};
+
+const validateCreateBookingSagaPayload = (payload) => {
+  const { userId, eventId, currency, items } = payload ?? {};
+
+  if (userId === undefined || eventId === undefined) {
+    return "userId and eventId are required";
+  }
+
+  if (!currency || typeof currency !== "string" || !currency.trim()) {
+    return "currency is required";
+  }
+
+  if (!Array.isArray(items) || items.length === 0) {
+    return "items must be a non-empty array";
+  }
+
+  const hasInvalidItem = items.some(
+    (item) =>
+      item?.ticketTypeId === undefined ||
+      item?.quantity === undefined ||
+      item?.unitPrice === undefined ||
+      item?.subtotal === undefined,
+  );
+
+  if (hasInvalidItem) {
+    return "Each item must include ticketTypeId, quantity, unitPrice, and subtotal";
+  }
+
+  return null;
+};
+
+const buildCreateBookingSagaInput = (payload) => {
+  const {
+    userId,
+    eventId,
+    bookingReference,
+    status,
+    totalAmount,
+    currency,
+    paymentStatus,
+    items,
+  } = payload;
+
+  return {
+    userId,
+    eventId,
+    bookingReference,
+    status,
+    totalAmount,
+    currency: currency.trim(),
+    paymentStatus,
+    items,
+  };
+};
+
+const startSagaAsync = async ({ stateMachineArn, sagaInput, executionName }) => {
+  const command = new StartExecutionCommand({
+    stateMachineArn,
+    input: JSON.stringify(sagaInput),
+    name: executionName,
+  });
+
+  return sfnClient.send(command);
+};
+
+const startSagaSync = async ({ stateMachineArn, sagaInput, executionName }) => {
+  const command = new StartSyncExecutionCommand({
+    stateMachineArn,
+    input: JSON.stringify(sagaInput),
+    name: executionName,
+  });
+
+  return sfnClient.send(command);
 };
 
 export const createBooking = async (req, res) => {
@@ -214,6 +314,24 @@ export const checkPaymentAvailability = async (req, res) => {
       return res.status(404).json({ message: "Booking not found" });
     }
 
+    // Fetch inventory holds for this booking via the inventory service
+    // For now, return an empty array; integrate inventory_service lookup if needed
+    let holdIds = [];
+    try {
+      const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || "http://localhost:3007";
+      const holdResponse = await fetch(
+        `${inventoryServiceUrl.replace(/\/+$/, "")}/inventory/booking/${bookingId}/holds`,
+        { method: "GET", headers: { "Content-Type": "application/json" } }
+      );
+      if (holdResponse.ok) {
+        const holdData = await holdResponse.json();
+        holdIds = Array.isArray(holdData?.holds) ? holdData.holds.map((h) => h.id) : [];
+      }
+    } catch (error) {
+      // If inventory service is unavailable, continue without holds
+      console.warn(`[checkPaymentAvailability] Could not fetch holds: ${error.message}`);
+    }
+
     const status = booking.status;
     if (status === "PENDING") {
       return res.status(200).json({
@@ -222,6 +340,7 @@ export const checkPaymentAvailability = async (req, res) => {
         bookingReference: booking.bookingReference,
         status,
         availableForPayment: true,
+        holdIds,
       });
     }
 
@@ -233,6 +352,7 @@ export const checkPaymentAvailability = async (req, res) => {
         bookingReference: booking.bookingReference,
         status,
         availableForPayment: false,
+        holdIds,
       });
     }
 
@@ -246,6 +366,7 @@ export const checkPaymentAvailability = async (req, res) => {
         bookingReference: booking.bookingReference,
         status: "EXPIRED",
         availableForPayment: false,
+        holdIds,
       });
     }
 
@@ -257,6 +378,7 @@ export const checkPaymentAvailability = async (req, res) => {
         bookingReference: booking.bookingReference,
         status,
         availableForPayment: false,
+        holdIds,
       });
     }
 
@@ -267,6 +389,7 @@ export const checkPaymentAvailability = async (req, res) => {
       bookingReference: booking.bookingReference,
       status,
       availableForPayment: false,
+      holdIds,
     });
   } catch (error) {
     console.error("Failed to check payment availability", error);
@@ -377,5 +500,174 @@ export const createBookingWithItems = async (req, res) => {
     return res
       .status(500)
       .json({ message: "Failed to create booking with items" });
+  }
+};
+
+export const startCreateBookingSaga = async (req, res) => {
+  // Default to synchronous execution for EXPRESS state machines.
+  // Override to async by passing ?mode=async or waitForResult=false.
+  const forceAsync =
+    req.query.mode === "async" ||
+    req.body?.mode === "async" ||
+    req.query.waitForResult === "false" ||
+    req.body?.waitForResult === false;
+
+  const stateMachineArn = process.env.STATE_MACHINE_ARN?.trim();
+  if (!stateMachineArn) {
+    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+  }
+
+  if (!isStepFunctionsStateMachineArn(stateMachineArn)) {
+    return res.status(500).json({
+      message:
+        "STATE_MACHINE_ARN must be a Step Functions state machine ARN (arn:aws:states:...:stateMachine:...), not an IAM role ARN.",
+      configuredValue: stateMachineArn,
+    });
+  }
+
+  const validationError = validateCreateBookingSagaPayload(req.body);
+  if (validationError) {
+    return res.status(400).json({ message: validationError });
+  }
+
+  try {
+    const sagaInput = buildCreateBookingSagaInput(req.body);
+    const executionName = `booking-saga-${sagaInput.eventId}-${sagaInput.userId}-${Date.now()}`.slice(0, 80);
+
+    if (forceAsync) {
+      const result = await startSagaAsync({ stateMachineArn, sagaInput, executionName });
+      return res.status(202).json({
+        message: "Saga execution started",
+        executionArn: result.executionArn,
+        startDate: result.startDate,
+        mode: "async",
+      });
+    }
+
+    let syncResult;
+    try {
+      syncResult = await startSagaSync({ stateMachineArn, sagaInput, executionName });
+    } catch (error) {
+      if (isSyncExecutionNotSupportedError(error)) {
+        const result = await startSagaAsync({ stateMachineArn, sagaInput, executionName });
+        return res.status(202).json({
+          message:
+            "State machine does not support synchronous execution (StartSyncExecution). Started saga asynchronously instead.",
+          executionArn: result.executionArn,
+          startDate: result.startDate,
+          mode: "async",
+          note: "Deploy this workflow as EXPRESS to use waitForResult=true.",
+        });
+      }
+
+      throw error;
+    }
+
+    const parsedOutput = syncResult.output ? JSON.parse(syncResult.output) : null;
+
+    if (syncResult.status !== "SUCCEEDED") {
+      return res.status(500).json({
+        message: "Saga execution failed",
+        executionArn: syncResult.executionArn,
+        status: syncResult.status,
+        error: syncResult.error,
+        cause: syncResult.cause,
+      });
+    }
+
+    return res.status(200).json({
+      message: "Saga execution completed",
+      executionArn: syncResult.executionArn,
+      status: syncResult.status,
+      bookingId: parsedOutput?.bookingId ?? null,
+      result: parsedOutput,
+      mode: "sync",
+    });
+  } catch (error) {
+    console.error("Failed to start create booking saga", error);
+    return res.status(500).json({
+      message: "Failed to start create booking saga",
+      error: error?.message,
+    });
+  }
+};
+
+/**
+ * expireStalePendingBookings
+ *
+ * Scans all bookings created within the last 1 hour, identifies those whose
+ * status is still PENDING and whose createdAt is more than 15 minutes ago,
+ * transitions them to EXPIRED, and writes a BookingStatusHistory record for
+ * each one.
+ *
+ * Returns an array of the booking IDs that were expired.
+ */
+export const expireStalePendingBookings = async (req, res) => {
+  const now = new Date();
+  const oneHourAgo = new Date(now.getTime() - 60 * 60 * 1000);   // now - 1 h
+  const fifteenMinutesAgo = new Date(now.getTime() - 15 * 60 * 1000); // now - 15 min
+
+  try {
+    // 1. Fetch all bookings created within the past hour that are still PENDING.
+    const recentPendingBookings = await prisma.booking.findMany({
+      where: {
+        status: "PENDING",
+        createdAt: {
+          gte: oneHourAgo, // created no earlier than 1 hour ago
+        },
+      },
+      select: {
+        id: true,
+        createdAt: true,
+        status: true,
+      },
+    });
+
+    // 2. Keep only the ones whose createdAt is older than 15 minutes.
+    const staleBookings = recentPendingBookings.filter(
+      (booking) => booking.createdAt <= fifteenMinutesAgo
+    );
+
+    if (staleBookings.length === 0) {
+      return res.status(200).json({
+        message: "No stale pending bookings found",
+        expiredBookingIds: [],
+        expiredCount: 0,
+      });
+    }
+
+    const staleIds = staleBookings.map((b) => b.id);
+
+    // 3. Expire them in a single transaction: bulk-update + insert history rows.
+    await prisma.$transaction(async (tx) => {
+      // Bulk status update
+      await tx.booking.updateMany({
+        where: { id: { in: staleIds } },
+        data: { status: "EXPIRED", paymentStatus: "CANCELLED" },
+      });
+
+      // Insert a BookingStatusHistory record for every expired booking
+      await tx.bookingStatusHistory.createMany({
+        data: staleIds.map((id) => ({
+          bookingId: id,
+          oldStatus: "PENDING",
+          newStatus: "EXPIRED",
+          reason: "Booking expired: payment not completed within 15 minutes",
+        })),
+      });
+    });
+
+    console.log(
+      `[expireStalePendingBookings] Expired ${staleIds.length} booking(s): ${staleIds.join(", ")}`
+    );
+
+    return res.status(200).json({
+      message: `${staleIds.length} booking(s) expired successfully`,
+      expiredBookingIds: staleIds,
+      expiredCount: staleIds.length,
+    });
+  } catch (error) {
+    console.error("[expireStalePendingBookings] Failed to expire stale bookings", error);
+    return res.status(500).json({ message: "Failed to expire stale pending bookings" });
   }
 };
