@@ -643,7 +643,7 @@ export const expireStalePendingBookings = async (req, res) => {
       // Bulk status update
       await tx.booking.updateMany({
         where: { id: { in: staleIds } },
-        data: { status: "EXPIRED" },
+        data: { status: "EXPIRED", paymentStatus: "CANCELLED" },
       });
 
       // Insert a BookingStatusHistory record for every expired booking
