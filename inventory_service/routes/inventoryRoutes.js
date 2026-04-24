@@ -1,6 +1,7 @@
 import { Router } from "express";
 import {
   createInventoryRecord,
+  getHoldIdsForBooking,
 } from "../controllers/inventoryController.js";
 import {
   createInventoryHold,
@@ -13,6 +14,9 @@ import {
 } from "../controllers/inventoryCompensationController.js";
 
 const inventoryRouter = Router();
+
+// Get an array of hold IDs for a given booking.
+inventoryRouter.get("/booking/:bookingId/hold-ids", getHoldIdsForBooking);
 
 // Create an inventory record for an event ticket type.
 inventoryRouter.post("/records", createInventoryRecord);
