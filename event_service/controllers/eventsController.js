@@ -45,13 +45,12 @@ export const createEvent = async (req, res) => {
     });
   }
 
-  const parsedVenueId = Number(venueId);
   const parsedStartTime = new Date(startTime);
   const parsedEndTime = new Date(endTime);
 
-  if (!Number.isInteger(parsedVenueId) || parsedVenueId <= 0) {
+  if (!venueId || typeof venueId !== "string" || venueId.trim() === "") {
     return res.status(400).json({
-      message: "venueId must be a positive integer",
+      message: "venueId must be a non-empty string",
     });
   }
 
@@ -76,7 +75,7 @@ export const createEvent = async (req, res) => {
   try {
     const event = await prisma.event.create({
       data: {
-        venueId: parsedVenueId,
+        venueId: venueId.trim(),
         title: title.trim(),
         description: description?.trim() || null,
         category: category?.trim() || null,
@@ -108,7 +107,92 @@ export const getEvents = async (req, res) => {
       },
     });
 
-    return res.status(200).json(events);
+    const venueServiceUrl = process.env.VENUE_SERVICE_URL || "http://localhost:3005";
+    const artistServiceUrl = process.env.ARTIST_SERVICE_URL || "http://localhost:3004";
+    const inventoryServiceUrl = process.env.INVENTORY_SERVICE_URL || "http://localhost:3007";
+
+    const uniqueVenueIds = [...new Set(events.map(e => e.venueId))];
+    const uniqueArtistIds = [...new Set(events.flatMap(e => e.eventArtists.map(ea => ea.artistId)))];
+
+    const venuesMap = new Map();
+    const artistsMap = new Map();
+
+    // Fetch venues
+    await Promise.all(
+      uniqueVenueIds.map(async (id) => {
+        try {
+          const res = await fetch(`${venueServiceUrl}/venues/${id}`);
+          if (res.ok) {
+            venuesMap.set(String(id), await res.json());
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch venue ${id}`, err.message);
+        }
+      })
+    );
+
+    // Fetch artists
+    await Promise.all(
+      uniqueArtistIds.map(async (id) => {
+        try {
+          const res = await fetch(`${artistServiceUrl}/artists/${id}`);
+          if (res.ok) {
+            artistsMap.set(String(id), await res.json());
+          }
+        } catch (err) {
+          console.warn(`Failed to fetch artist ${id}`, err.message);
+        }
+      })
+    );
+
+    const inventoriesMap = new Map();
+    const uniqueEventIds = events.map(e => e.id);
+
+    try {
+      if (uniqueEventIds.length > 0) {
+        const inventoryRes = await fetch(`${inventoryServiceUrl}/inventory/events?eventIds=${uniqueEventIds.join(',')}`);
+        if (inventoryRes.ok) {
+          const inventories = await inventoryRes.json();
+          inventories.forEach(inv => {
+            if (!inventoriesMap.has(inv.eventId)) {
+              inventoriesMap.set(inv.eventId, new Map());
+            }
+            inventoriesMap.get(inv.eventId).set(inv.ticketTypeId, inv);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn("Failed to fetch inventory from inventory_service", err.message);
+    }
+
+    // Enrich events with venue and artist data
+    const enrichedEvents = events.map(event => {
+      const venue = venuesMap.get(String(event.venueId)) || { id: event.venueId, error: "Venue details not found" };
+
+      const enrichedArtists = event.eventArtists.map(ea => {
+        const artistDetails = artistsMap.get(String(ea.artistId));
+        return artistDetails ? { ...ea, artistDetails } : ea;
+      });
+
+      const eventInventories = inventoriesMap.get(event.id) || new Map();
+      const enrichedTicketTypes = event.eventTicketTypes.map(tt => {
+        const inventory = eventInventories.get(tt.id);
+        return {
+          ...tt,
+          availableQuantity: inventory ? inventory.availableQuantity : 0,
+          reservedQuantity: inventory ? inventory.reservedQuantity : 0,
+        };
+      });
+
+      return {
+        ...event,
+        venueDetails: venue,
+        eventArtists: enrichedArtists,
+        eventTicketTypes: enrichedTicketTypes,
+      };
+    });
+
+    return res.status(200).json(enrichedEvents);
   } catch (error) {
     console.error("Failed to fetch events", error);
     return res.status(500).json({ message: "Failed to fetch events" });
