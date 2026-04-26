@@ -1,149 +1,189 @@
-export default function Home() {
-  const metrics = [
-    { label: "Live events", value: "128" },
-    { label: "Tickets sold today", value: "9.4k" },
-    { label: "Average fill rate", value: "87%" },
-    { label: "Pending settlements", value: "18" },
-  ];
+"use client";
 
-  const operations = [
-    {
-      title: "Inventory sync",
-      detail: "Keep venue capacity, reserved seats, and ticket types aligned across services.",
-    },
-    {
-      title: "Booking oversight",
-      detail: "Review checkout activity, failed reservations, and refund requests from one place.",
-    },
-    {
-      title: "Artist and venue routing",
-      detail: "Coordinate show listings, room allocations, and published schedules before launch.",
-    },
-  ];
+import { useEvents } from "@/hooks/useEvents";
+import { useUsers } from "@/hooks/useUsers";
+import { usePayments } from "@/hooks/usePayments";
+import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { 
+  Calendar, 
+  Users, 
+  CreditCard, 
+  TrendingUp, 
+  Plus, 
+  Activity,
+  ArrowUpRight,
+  ShieldCheck,
+  Zap
+} from "lucide-react";
+import Link from "next/link";
+import { 
+  Table, 
+  TableBody, 
+  TableCell, 
+  TableHead, 
+  TableHeader, 
+  TableRow 
+} from "@/components/ui/table";
+import { Badge } from "@/components/ui/badge";
 
-  const queue = [
-    "Festival launch packet ready for approval",
-    "12 seats released after payment timeout",
-    "Settlement report generated for last night",
+export default function DashboardPage() {
+  const { data: events } = useEvents();
+  const { data: users } = useUsers();
+  const { data: payments } = usePayments();
+
+  const stats = [
+    {
+      title: "Total Events",
+      value: events?.length || "0",
+      description: "Across all categories",
+      icon: Calendar,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      title: "Active Users",
+      value: users?.length || "0",
+      description: "System-wide directory",
+      icon: Users,
+      color: "text-emerald-600",
+      bg: "bg-emerald-50",
+    },
+    {
+      title: "Revenue",
+      value: `$${(Array.isArray(payments) ? payments : []).reduce((acc, p) => acc + (p.status === 'PAID' ? p.amount : 0), 0).toLocaleString() || "0"}`,
+      description: "Net processed volume",
+      icon: CreditCard,
+      color: "text-indigo-600",
+      bg: "bg-indigo-50",
+    },
   ];
 
   return (
-    <main className="mx-auto flex min-h-screen w-full max-w-7xl flex-col px-4 py-6 sm:px-6 lg:px-8">
-      <section className="overflow-hidden rounded-[2rem] border border-white/60 bg-white/80 shadow-[0_24px_120px_rgba(15,23,42,0.12)] backdrop-blur md:rounded-[2.5rem]">
-        <div className="grid gap-8 px-6 py-6 lg:grid-cols-[1.15fr_0.85fr] lg:px-8 lg:py-8">
-          <div className="flex flex-col gap-6">
-            <div className="flex flex-wrap items-center gap-3 text-sm font-medium text-slate-600">
-              <span className="rounded-full bg-amber-100 px-3 py-1 text-amber-900">Tickety Admin</span>
-              <span>Event control center</span>
-            </div>
-
-            <div className="max-w-2xl space-y-4">
-              <h1 className="text-4xl font-semibold tracking-tight text-slate-950 sm:text-5xl lg:text-6xl">
-                Run events, ticket inventory, and payouts from one command panel.
-              </h1>
-              <p className="max-w-xl text-base leading-7 text-slate-600 sm:text-lg">
-                Monitor live sales, approve releases, and keep every venue in sync while the
-                customer experience stays fast and reliable.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap gap-3">
-              <a
-                className="inline-flex items-center justify-center rounded-full bg-slate-950 px-5 py-3 text-sm font-semibold text-white transition-transform hover:-translate-y-0.5"
-                href="#operations"
-              >
-                Open operations
-              </a>
-              <a
-                className="inline-flex items-center justify-center rounded-full border border-slate-300 bg-white px-5 py-3 text-sm font-semibold text-slate-800 transition-colors hover:border-slate-400 hover:bg-slate-50"
-                href="#queue"
-              >
-                Review queue
-              </a>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-              {metrics.map((metric) => (
-                <div
-                  key={metric.label}
-                  className="rounded-2xl border border-slate-200 bg-slate-50/80 p-4"
-                >
-                  <div className="text-3xl font-semibold tracking-tight text-slate-950">
-                    {metric.value}
-                  </div>
-                  <div className="mt-1 text-sm text-slate-600">{metric.label}</div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <aside className="flex flex-col gap-4 rounded-[1.75rem] bg-slate-950 p-5 text-slate-50 shadow-2xl shadow-slate-950/20">
-            <div className="flex items-center justify-between gap-4 border-b border-white/10 pb-4">
-              <div>
-                <p className="text-sm text-slate-400">Tonight’s top event</p>
-                <h2 className="text-xl font-semibold">Arena Summer Pass</h2>
-              </div>
-              <div className="rounded-full bg-emerald-400/15 px-3 py-1 text-sm font-semibold text-emerald-300">
-                94% full
-              </div>
-            </div>
-
-            <div className="grid gap-3 sm:grid-cols-3 lg:grid-cols-1">
-              {operations.map((item) => (
-                <div key={item.title} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                  <h3 className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-200">
-                    {item.title}
-                  </h3>
-                  <p className="mt-2 text-sm leading-6 text-slate-300">{item.detail}</p>
-                </div>
-              ))}
-            </div>
-          </aside>
+    <div className="p-8 space-y-8 max-w-7xl mx-auto">
+      {/* Welcome Header */}
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-left">Systems Overview</h1>
+          <p className="text-slate-500 mt-1 text-left">Welcome back, Administrator. Here's a snapshot of your event booking ecosystem.</p>
         </div>
-      </section>
+        <div className="flex items-center gap-3">
+          <Link href="/events">
+            <Button className="bg-blue-600 hover:bg-blue-700 shadow-sm gap-2">
+              <Plus className="h-4 w-4" />
+              New Event
+            </Button>
+          </Link>
+        </div>
+      </div>
 
-      <section id="operations" className="grid gap-6 py-6 lg:grid-cols-[1fr_0.9fr]">
-        <div className="rounded-[2rem] border border-slate-200 bg-white/75 p-6 shadow-lg shadow-slate-950/5 backdrop-blur">
-          <div className="flex items-end justify-between gap-4">
+      {/* Stats Grid */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {stats.map((stat, i) => (
+          <Card key={i} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
+            <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
+              <CardTitle className="text-sm font-medium text-slate-500">
+                {stat.title}
+              </CardTitle>
+              <div className={`p-2 rounded-lg ${stat.bg} ${stat.color}`}>
+                <stat.icon className="h-4 w-4" />
+              </div>
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-slate-900">{stat.value}</div>
+              <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                <TrendingUp className="h-3 w-3 text-emerald-500" />
+                {stat.description}
+              </p>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+        {/* Recent Events List */}
+        <Card className="lg:col-span-2 border-slate-200 shadow-sm">
+          <CardHeader className="flex flex-row items-center justify-between">
             <div>
-              <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-700">
-                Workflow
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-slate-950">Operational priorities</h2>
+              <CardTitle className="text-lg font-bold text-slate-900 text-left">Recent Events</CardTitle>
+              <CardDescription className="text-left">Latest event configurations and deployments.</CardDescription>
             </div>
-            <div className="rounded-full bg-slate-100 px-3 py-1 text-sm text-slate-600">
-              Updated in real time
-            </div>
-          </div>
+            <Link href="/events">
+              <Button variant="ghost" size="sm" className="text-blue-600 hover:text-blue-700 gap-1">
+                View All <ArrowUpRight className="h-3.5 w-3.5" />
+              </Button>
+            </Link>
+          </CardHeader>
+          <CardContent>
+            <Table>
+              <TableHeader>
+                <TableRow className="hover:bg-transparent">
+                  <TableHead>Event</TableHead>
+                  <TableHead>Category</TableHead>
+                  <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Action</TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {events?.slice(0, 5).map((event) => (
+                  <TableRow key={event.id}>
+                    <TableCell className="font-medium text-slate-900">{event.title}</TableCell>
+                    <TableCell className="text-slate-500 text-xs">{event.category || "General"}</TableCell>
+                    <TableCell>
+                      <Badge variant={event.status === 'published' ? 'success' : 'secondary'} className="capitalize text-[10px]">
+                        {event.status}
+                      </Badge>
+                    </TableCell>
+                    <TableCell className="text-right">
+                      <Link href="/events">
+                        <Button variant="outline" size="sm" className="h-7 text-[10px] border-slate-200">Manage</Button>
+                      </Link>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          </CardContent>
+        </Card>
 
-          <div className="mt-6 grid gap-4 md:grid-cols-3">
-            {operations.map((item, index) => (
-              <div key={item.title} className="rounded-2xl border border-slate-200 p-4">
-                <div className="text-sm font-semibold text-slate-500">0{index + 1}</div>
-                <h3 className="mt-3 text-lg font-semibold text-slate-950">{item.title}</h3>
-                <p className="mt-2 text-sm leading-6 text-slate-600">{item.detail}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        <div id="queue" className="rounded-[2rem] border border-slate-200 bg-amber-50/70 p-6 shadow-lg shadow-slate-950/5">
-          <p className="text-sm font-semibold uppercase tracking-[0.2em] text-amber-800">
-            Queue
-          </p>
-          <h2 className="mt-2 text-2xl font-semibold text-slate-950">Live admin alerts</h2>
-          <div className="mt-6 space-y-3">
-            {queue.map((item, index) => (
-              <div key={item} className="flex items-start gap-4 rounded-2xl bg-white px-4 py-4 shadow-sm">
-                <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-slate-950 text-sm font-semibold text-white">
-                  {index + 1}
+        {/* Quick Actions */}
+        <div className="space-y-8">
+          <Card className="border-slate-200 shadow-sm overflow-hidden">
+             <div className="bg-blue-600 p-4 text-white">
+                <h4 className="font-bold flex items-center gap-2">
+                  <Zap className="h-4 w-4" />
+                  Quick Actions
+                </h4>
+             </div>
+             <CardContent className="p-2">
+                <div className="grid grid-cols-1 gap-1">
+                  <Link href="/users">
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-slate-600 hover:bg-slate-50">
+                      <Users className="h-4 w-4 text-slate-400" />
+                      Add New User
+                    </Button>
+                  </Link>
+                  <Separator />
+                  <Link href="/artists">
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-slate-600 hover:bg-slate-50">
+                      <TrendingUp className="h-4 w-4 text-slate-400" />
+                      Register Artist
+                    </Button>
+                  </Link>
+                   <Separator />
+                  <Link href="/payments">
+                    <Button variant="ghost" className="w-full justify-start gap-3 h-12 text-slate-600 hover:bg-slate-50">
+                      <CreditCard className="h-4 w-4 text-slate-400" />
+                      Review Refunds
+                    </Button>
+                  </Link>
                 </div>
-                <p className="text-sm leading-6 text-slate-700">{item}</p>
-              </div>
-            ))}
-          </div>
+             </CardContent>
+          </Card>
         </div>
-      </section>
-    </main>
+      </div>
+    </div>
   );
 }
+
+import { Separator } from "@/components/ui/separator";

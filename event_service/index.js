@@ -1,11 +1,13 @@
 import express from "express";
 import "dotenv/config";
+import cors from "cors";
 import eventsRouter from "./routes/eventsRoutes.js";
 import { connectPrisma, disconnectPrisma } from "./lib/prismaClient.js";
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 
+app.use(cors());
 app.use(express.json());
 
 app.get("/health", (req, res) => {
