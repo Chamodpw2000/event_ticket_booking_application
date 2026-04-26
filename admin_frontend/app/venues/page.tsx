@@ -1,3 +1,5 @@
+"use client";
+
 import { VenueList } from "@/features/venues/VenueList";
 import { CreateVenueForm } from "@/features/venues/CreateVenueForm";
 import { Button } from "@/components/ui/button";
@@ -19,8 +21,8 @@ export default function VenuesPage() {
     <div className="p-8 space-y-6 max-w-7xl mx-auto">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 pb-6">
         <div>
-          <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Venue Management</h1>
-          <p className="text-slate-500 mt-1">Manage locations, seating capacities, and physical addresses.</p>
+          <h1 className="text-3xl font-bold text-slate-900 tracking-tight text-left">Venue Management</h1>
+          <p className="text-slate-500 mt-1 text-left">Manage locations, seating capacities, and physical addresses.</p>
         </div>
         <div className="flex items-center gap-3">
           <Button variant="outline" className="gap-2 border-slate-200 text-slate-600">

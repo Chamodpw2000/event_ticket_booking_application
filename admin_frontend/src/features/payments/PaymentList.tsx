@@ -29,6 +29,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { ServiceError } from "@/components/ServiceError";
 
 export function PaymentList() {
   const { data: payments, isLoading, error } = usePayments();
@@ -150,9 +151,10 @@ function LoadingSkeleton() {
 
 function ErrorMessage() {
   return (
-    <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-100 text-slate-500">
-      <AlertCircle className="h-8 w-8 mx-auto mb-4 text-slate-300" />
-      <p>Unable to load payment transactions.</p>
-    </div>
+    <ServiceError 
+      serviceName="Payment Ledger" 
+      port="3007" 
+      icon={CreditCard} 
+    />
   );
 }

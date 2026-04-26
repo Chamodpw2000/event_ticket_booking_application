@@ -1,3 +1,5 @@
+"use client";
+
 import { ArtistList } from "@/features/artists/ArtistList";
 import { CreateArtistForm } from "@/features/artists/CreateArtistForm";
 import { Button } from "@/components/ui/button";

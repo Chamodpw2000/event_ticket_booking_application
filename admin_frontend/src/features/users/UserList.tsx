@@ -21,6 +21,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { ServiceError } from "@/components/ServiceError";
 
 export function UserList() {
   const { data: users, isLoading, error } = useUsers();
@@ -152,9 +153,10 @@ function LoadingSkeleton() {
 
 function ErrorMessage() {
   return (
-    <div className="p-8 text-center bg-red-50 rounded-xl border border-red-100 text-red-600">
-      <p className="font-semibold">Failed to load users</p>
-      <p className="text-sm opacity-80 mt-1">Please ensure the user-service is running and accessible.</p>
-    </div>
+    <ServiceError 
+      serviceName="Identity Hub" 
+      port="3001" 
+      icon={User} 
+    />
   );
 }

@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { MapPin, Users, Phone, MoreVertical } from "lucide-react";
+import { ServiceError } from "@/components/ServiceError";
 
 export function VenueList() {
   const { data: venues, isLoading, error } = useVenues();
@@ -101,8 +102,10 @@ function LoadingSkeleton() {
 
 function ErrorMessage() {
   return (
-    <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-100 text-slate-500">
-      <p>No venues found or service unavailable.</p>
-    </div>
+    <ServiceError 
+      serviceName="Venue Hub" 
+      port="3005" 
+      icon={MapPin} 
+    />
   );
 }

@@ -29,6 +29,7 @@ import {
   DropdownMenuItem, 
   DropdownMenuTrigger 
 } from "@/components/ui/dropdown-menu";
+import { ServiceError } from "@/components/ServiceError";
 
 export function BookingList() {
   const { data: bookings, isLoading, error, refetch } = useBookings();
@@ -171,9 +172,10 @@ function LoadingSkeleton() {
 
 function ErrorMessage() {
   return (
-    <div className="p-8 text-center bg-amber-50 rounded-xl border border-amber-100 text-amber-700">
-      <p className="font-semibold">Unable to reach Booking Service</p>
-      <p className="text-sm opacity-80 mt-1">Real-time booking data is currently unavailable.</p>
-    </div>
+    <ServiceError 
+      serviceName="Booking Engine" 
+      port="3002" 
+      icon={Ticket} 
+    />
   );
 }

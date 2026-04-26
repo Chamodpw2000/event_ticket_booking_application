@@ -1,5 +1,24 @@
 import { eventClient } from "./client";
 
+export interface EventTicketType {
+  id: number;
+  eventId: number;
+  name: string;
+  price: number;
+  currency: string;
+  description: string | null;
+  initialStock: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface EventArtist {
+  id: number;
+  eventId: number;
+  artistId: number;
+  createdAt: string;
+}
+
 export interface Event {
   id: number;
   venueId: number;
@@ -12,8 +31,8 @@ export interface Event {
   bannerUrl: string | null;
   createdAt: string;
   updatedAt: string;
-  eventTicketTypes: any[];
-  eventArtists: any[];
+  eventTicketTypes: EventTicketType[];
+  eventArtists: EventArtist[];
 }
 
 export const eventService = {

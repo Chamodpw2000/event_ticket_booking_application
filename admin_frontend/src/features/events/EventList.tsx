@@ -3,6 +3,8 @@
 import { useEvents } from "@/hooks/useEvents";
 import { TicketTypeSagaForm } from "./TicketTypeSagaForm";
 import { AssignArtistsForm } from "./AssignArtistsForm";
+import { EventDetailsSheet } from "./EventDetailsSheet";
+import { Event } from "@/api/events";
 import { 
   Table, 
   TableBody, 
@@ -21,8 +23,10 @@ import {
   Edit, 
   TicketPlus, 
   ExternalLink,
-  UserPlus
+  UserPlus,
+  Zap
 } from "lucide-react";
+import { ServiceError } from "@/components/ServiceError";
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -44,6 +48,8 @@ export function EventList() {
   const [isSagaOpen, setIsSagaOpen] = useState(false);
   const [isAssignArtistsOpen, setIsAssignArtistsOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
+  const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
+  const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
   const handleOpenSaga = (eventId: number) => {
     setSelectedEventId(eventId);
@@ -53,6 +59,11 @@ export function EventList() {
   const handleOpenAssignArtists = (eventId: number) => {
     setSelectedEventId(eventId);
     setIsAssignArtistsOpen(true);
+  };
+
+  const handleOpenDetails = (event: Event) => {
+    setSelectedEvent(event);
+    setIsDetailsOpen(true);
   };
 
   if (isLoading) {
@@ -72,9 +83,11 @@ export function EventList() {
 
   if (isError) {
     return (
-      <div className="p-4 border border-red-200 bg-red-50 text-red-700 rounded-md">
-        Failed to load events. Please ensure the Event Service is running.
-      </div>
+      <ServiceError 
+        serviceName="Event Service" 
+        port="3003" 
+        icon={Zap} 
+      />
     );
   }
 
@@ -94,8 +107,14 @@ export function EventList() {
           </TableHeader>
           <TableBody>
             {events?.map((event) => (
-              <TableRow key={event.id} className="hover:bg-slate-50/50 transition-colors">
-                <TableCell className="font-medium text-slate-900">{event.title}</TableCell>
+              <TableRow 
+                key={event.id} 
+                className="hover:bg-slate-50/50 transition-colors cursor-pointer group"
+                onClick={() => handleOpenDetails(event)}
+              >
+                <TableCell className="font-medium text-slate-900 group-hover:text-blue-600 transition-colors">
+                  {event.title}
+                </TableCell>
                 <TableCell>
                   <Badge 
                     className={cn(
@@ -130,7 +149,14 @@ export function EventList() {
                         <MoreVertical className="h-4 w-4" />
                       </Button>
                     </DropdownMenuTrigger>
-                    <DropdownMenuContent align="end" className="w-48">
+                    <DropdownMenuContent align="end" className="w-48" onClick={(e) => e.stopPropagation()}>
+                      <DropdownMenuItem 
+                        className="gap-2"
+                        onClick={() => handleOpenDetails(event)}
+                      >
+                        <ExternalLink className="h-4 w-4" />
+                        View Full Details
+                      </DropdownMenuItem>
                       <DropdownMenuItem className="gap-2">
                         <Edit className="h-4 w-4" />
                         Edit Details
@@ -195,6 +221,11 @@ export function EventList() {
           )}
         </DialogContent>
       </Dialog>
+      <EventDetailsSheet 
+        event={selectedEvent} 
+        open={isDetailsOpen} 
+        onOpenChange={setIsDetailsOpen} 
+      />
     </div>
   );
 }

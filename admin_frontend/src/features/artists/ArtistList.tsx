@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button";
 import { Skeleton } from "@/components/ui/skeleton";
 import { Card } from "@/components/ui/card";
 import { Music, Mail, ExternalLink, MoreVertical } from "lucide-react";
+import { ServiceError } from "@/components/ServiceError";
 
 export function ArtistList() {
   const { data: artists, isLoading, error } = useArtists();
@@ -107,8 +108,10 @@ function LoadingSkeleton() {
 
 function ErrorMessage() {
   return (
-    <div className="p-8 text-center bg-slate-50 rounded-xl border border-slate-100 text-slate-500">
-      <p>No artists found or service unavailable.</p>
-    </div>
+    <ServiceError 
+      serviceName="Artist Directory" 
+      port="3004" 
+      icon={Music} 
+    />
   );
 }
