@@ -1,6 +1,7 @@
 import express from "express";
 import "dotenv/config";
 import { connectPrisma ,  disconnectPrisma } from "./lib/prismaClient.js";
+import cors from "cors";
 import ticketsRouter from "./routes/ticketsRoutes.js";
 import bookingsRouter from "./routes/bookingsRoutes.js";
 import bookingItemsRouter from "./routes/bookingItemsRoutes.js";
@@ -8,6 +9,7 @@ import bookingItemsRouter from "./routes/bookingItemsRoutes.js";
 const app = express();
 const PORT = process.env.PORT || 3003;
 
+app.use(cors());
 app.use(express.json());
 
 app.get("/health", (req, res) => {

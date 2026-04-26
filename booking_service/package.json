@@ -16,6 +16,7 @@
     "@aws-sdk/client-sqs": "^3.1036.0",
     "@prisma/adapter-mariadb": "^7.6.0",
     "@prisma/client": "^7.6.0",
+    "cors": "^2.8.6",
     "dotenv": "^17.4.0",
     "express": "^5.2.1",
     "mariadb": "^3.5.2"
