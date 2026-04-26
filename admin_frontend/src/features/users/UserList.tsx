@@ -155,7 +155,7 @@ function ErrorMessage() {
   return (
     <ServiceError 
       serviceName="Identity Hub" 
-      port="3001" 
+      port="3002" 
       icon={User} 
     />
   );

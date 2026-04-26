@@ -153,7 +153,7 @@ function ErrorMessage() {
   return (
     <ServiceError 
       serviceName="Payment Ledger" 
-      port="3007" 
+      port="3006" 
       icon={CreditCard} 
     />
   );

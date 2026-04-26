@@ -85,7 +85,7 @@ export function EventList() {
     return (
       <ServiceError 
         serviceName="Event Service" 
-        port="3003" 
+        port="3001" 
         icon={Zap} 
       />
     );

@@ -1,4 +1,5 @@
 import express from "express";
+import cors from "cors";
 import "dotenv/config";
 import { connectDatabase, disconnectDatabase } from "./lib/mongoClient.js";
 import artistsRouter from "./routes/artistsRoutes.js";
@@ -6,6 +7,7 @@ import artistsRouter from "./routes/artistsRoutes.js";
 const app = express();
 const PORT = process.env.PORT || 3004;
 
+app.use(cors());
 app.use(express.json());
 
 app.get("/health", (req, res) => {

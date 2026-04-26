@@ -174,7 +174,7 @@ function ErrorMessage() {
   return (
     <ServiceError 
       serviceName="Booking Engine" 
-      port="3002" 
+      port="3003" 
       icon={Ticket} 
     />
   );
