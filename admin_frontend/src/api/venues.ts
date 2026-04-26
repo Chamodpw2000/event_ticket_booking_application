@@ -13,6 +13,7 @@ export interface Venue {
   phone?: string;
   isActive: boolean;
   createdAt: string;
+  updatedAt: string;
 }
 
 export const venueService = {
@@ -21,8 +22,8 @@ export const venueService = {
     return response.data;
   },
 
-  create: async (data: Partial<Venue>): Promise<Venue> => {
+  create: async (data: any): Promise<Venue> => {
     const response = await venueClient.post("/", data);
     return response.data;
-  },
+  }
 };
