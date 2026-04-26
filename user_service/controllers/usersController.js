@@ -101,7 +101,7 @@ const ensureRoleIdsExist = async (normalizedRoleIds) => {
 };
 
 export const createUser = async (req, res) => {
-  const { email, password, status, profile, roleIds } = req.body;
+  const { email, password, status, profile, roleId } = req.body;
 
   if (!email || !password) {
     return res.status(400).json({
@@ -109,11 +109,11 @@ export const createUser = async (req, res) => {
     });
   }
 
-  const normalizedRoleIds = normalizeRoleIds(roleIds);
+  const parsedRoleId = parseObjectId(roleId);
 
-  if (roleIds !== undefined && normalizedRoleIds.length !== new Set(roleIds).size) {
+  if (roleId !== undefined && !parsedRoleId) {
     return res.status(400).json({
-      message: "roleIds must be an array of valid ids",
+      message: "roleId must be a valid id",
     });
   }
 
@@ -146,17 +146,20 @@ export const createUser = async (req, res) => {
   }
 
   try {
-    const rolesExist = await ensureRoleIdsExist(normalizedRoleIds);
-    if (!rolesExist) {
-      return res.status(400).json({
-        message: "one or more roleIds do not exist",
-      });
+    if (parsedRoleId) {
+      const roleExists = await Role.exists({ _id: parsedRoleId });
+      if (!roleExists) {
+        return res.status(400).json({
+          message: "roleId does not exist",
+        });
+      }
     }
 
     const createdUser = await User.create({
       email: String(email).trim().toLowerCase(),
       password: hashPassword(password),
       status: status && typeof status === "string" ? status : "active",
+      ...(parsedRoleId ? { role: parsedRoleId } : {}),
     });
 
     if (profile) {
@@ -167,15 +170,6 @@ export const createUser = async (req, res) => {
         bio: profile.bio ?? null,
         birthday: profile.birthday ? new Date(profile.birthday) : null,
       });
-    }
-
-    if (normalizedRoleIds.length > 0) {
-      await UserRole.insertMany(
-        normalizedRoleIds.map((roleId) => ({
-          userId: createdUser._id,
-          roleId: new mongoose.Types.ObjectId(roleId),
-        })),
-      );
     }
 
     const apiUser = await getApiUserById(createdUser._id);

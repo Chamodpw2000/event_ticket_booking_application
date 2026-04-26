@@ -110,7 +110,7 @@ export const handler = async (event) => {
       }
 
       // 4. Save Tickets to Database
-      const createTicketsRes = await fetch(`${bookingServiceUrl}/bookings/${bookingId}/tickets`, {
+      const createTicketsRes = await fetch(`${bookingServiceUrl}/tickets`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ tickets: ticketsToCreate }),

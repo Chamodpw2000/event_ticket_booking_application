@@ -6,7 +6,6 @@ import {
   confirmBooking,
   getBookingById,
   getBookingDetails,
-  createTickets,
   getBookings,
   startCreateBookingSaga,
   expireStalePendingBookings,
@@ -26,7 +25,6 @@ bookingsRouter.get("/", getBookings);
 bookingsRouter.get("/:bookingId/payment-availability", checkPaymentAvailability);
 bookingsRouter.get("/:bookingId", getBookingById);
 bookingsRouter.get("/:bookingId/details", getBookingDetails);
-bookingsRouter.post("/:bookingId/tickets", createTickets);
 
 
 

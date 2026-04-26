@@ -315,7 +315,7 @@ export const confirmBooking = async (req, res) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
-      console.log(result)
+
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking) {
         const error = new Error("BOOKING_NOT_FOUND");
@@ -355,6 +355,8 @@ export const confirmBooking = async (req, res) => {
 
       return { booking: updatedBooking, changed: true };
     });
+
+    console.log(result)
 
     if (result.changed) {
       try {
