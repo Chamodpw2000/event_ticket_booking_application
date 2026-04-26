@@ -1,7 +1,6 @@
 "use client";
 
 import { useEvents } from "@/hooks/useEvents";
-import { TicketTypeSagaForm } from "./TicketTypeSagaForm";
 import { AssignArtistsForm } from "./AssignArtistsForm";
 import { EventDetailsSheet } from "./EventDetailsSheet";
 import { Event } from "@/api/events";
@@ -21,7 +20,6 @@ import {
   MapPin, 
   MoreVertical, 
   Edit, 
-  TicketPlus, 
   ExternalLink,
   UserPlus,
   Zap
@@ -45,16 +43,11 @@ import { cn } from "@/lib/utils";
 
 export function EventList() {
   const { data: events, isLoading, isError } = useEvents();
-  const [isSagaOpen, setIsSagaOpen] = useState(false);
   const [isAssignArtistsOpen, setIsAssignArtistsOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
 
-  const handleOpenSaga = (eventId: number) => {
-    setSelectedEventId(eventId);
-    setIsSagaOpen(true);
-  };
 
   const handleOpenAssignArtists = (eventId: number) => {
     setSelectedEventId(eventId);
@@ -158,13 +151,6 @@ export function EventList() {
                         View Full Details
                       </DropdownMenuItem>
                       <DropdownMenuItem 
-                        className="gap-2 text-blue-600 focus:text-blue-600"
-                        onClick={() => handleOpenSaga(event.id)}
-                      >
-                        <TicketPlus className="h-4 w-4" />
-                        Add Tickets (Saga)
-                      </DropdownMenuItem>
-                      <DropdownMenuItem 
                         className="gap-2 text-indigo-600 focus:text-indigo-600"
                         onClick={() => handleOpenAssignArtists(event.id)}
                       >
@@ -180,22 +166,6 @@ export function EventList() {
         </Table>
       </Card>
 
-      <Dialog open={isSagaOpen} onOpenChange={setIsSagaOpen}>
-        <DialogContent className="sm:max-w-[500px]">
-          <DialogHeader>
-            <DialogTitle>Add Ticket Inventory</DialogTitle>
-            <DialogDescription>
-              Create a ticket type and initialize inventory in one atomic operation.
-            </DialogDescription>
-          </DialogHeader>
-          {selectedEventId && (
-            <TicketTypeSagaForm 
-              eventId={selectedEventId} 
-              onSuccess={() => setIsSagaOpen(false)} 
-            />
-          )}
-        </DialogContent>
-      </Dialog>
 
       <Dialog open={isAssignArtistsOpen} onOpenChange={setIsAssignArtistsOpen}>
         <DialogContent className="sm:max-w-[450px]">

@@ -57,14 +57,6 @@ export default function DashboardPage() {
       color: "text-indigo-600",
       bg: "bg-indigo-50",
     },
-    {
-      title: "Active Sagas",
-      value: "4",
-      description: "Real-time transactions",
-      icon: Activity,
-      color: "text-amber-600",
-      bg: "bg-amber-50",
-    },
   ];
 
   return (
@@ -86,7 +78,7 @@ export default function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {stats.map((stat, i) => (
           <Card key={i} className="border-slate-200 shadow-sm hover:shadow-md transition-shadow">
             <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
@@ -154,37 +146,8 @@ export default function DashboardPage() {
           </CardContent>
         </Card>
 
-        {/* System Health & Quick Actions */}
+        {/* Quick Actions */}
         <div className="space-y-8">
-          <Card className="border-slate-200 shadow-sm bg-slate-900 text-white">
-            <CardHeader>
-              <CardTitle className="text-lg font-bold flex items-center gap-2">
-                <ShieldCheck className="h-5 w-5 text-emerald-400" />
-                System Health
-              </CardTitle>
-            </CardHeader>
-            <CardContent className="space-y-4">
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Microservices</span>
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Healthy</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">AWS Step Functions</span>
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Online</Badge>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-sm text-slate-400">Database Cluster</span>
-                <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Optimal</Badge>
-              </div>
-              <div className="pt-4 mt-4 border-t border-slate-800">
-                <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                  <div className="h-2 w-2 rounded-full bg-emerald-500 animate-pulse" />
-                  Last heartbeat: {new Date().toLocaleTimeString()}
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
           <Card className="border-slate-200 shadow-sm overflow-hidden">
              <div className="bg-blue-600 p-4 text-white">
                 <h4 className="font-bold flex items-center gap-2">
