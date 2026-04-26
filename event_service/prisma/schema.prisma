@@ -33,7 +33,7 @@ model Event {
 model EventArtist {
   id        Int      @id @default(autoincrement())
   eventId   Int
-  artistId  Int
+  artistId  String
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 

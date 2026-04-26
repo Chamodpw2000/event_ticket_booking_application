@@ -130,12 +130,12 @@ export const addEventArtists = async (req, res) => {
   }
 
   const parsedArtistIds = artistIds
-    .map((id) => parsePositiveInt(id))
-    .filter((id) => id !== null);
+    .map((id) => String(id).trim())
+    .filter((id) => id.length > 0);
 
   if (parsedArtistIds.length !== artistIds.length) {
     return res.status(400).json({
-      message: "artistIds must contain only positive integers",
+      message: "artistIds must contain only valid strings",
     });
   }
 

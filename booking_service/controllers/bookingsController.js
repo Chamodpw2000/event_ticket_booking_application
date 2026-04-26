@@ -4,8 +4,13 @@ import {
   StartExecutionCommand,
   StartSyncExecutionCommand,
 } from "@aws-sdk/client-sfn";
+import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
 const sfnClient = new SFNClient({
+  region: process.env.AWS_REGION || "us-east-1",
+});
+
+const sqsClient = new SQSClient({
   region: process.env.AWS_REGION || "us-east-1",
 });
 
@@ -226,6 +231,76 @@ export const getBookingById = async (req, res) => {
   }
 };
 
+export const getBookingDetails = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  try {
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: {
+        items: true
+      }
+    });
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" });
+    }
+
+    return res.status(200).json({ booking });
+  } catch (error) {
+    console.error("Failed to fetch booking details", error);
+    return res.status(500).json({ message: "Failed to fetch booking details" });
+  }
+};
+
+export const createTickets = async (req, res) => {
+  const bookingId = parsePositiveInt(req.params.bookingId);
+  const { tickets } = req.body;
+
+  if (!bookingId) {
+    return res.status(400).json({ message: "bookingId must be a positive integer" });
+  }
+
+  if (!Array.isArray(tickets) || tickets.length === 0) {
+    return res.status(400).json({ message: "tickets must be a non-empty array" });
+  }
+
+  try {
+    const createdTickets = await prisma.$transaction(async (tx) => {
+      const results = [];
+      for (const t of tickets) {
+        const ticket = await tx.ticket.create({
+          data: {
+            bookingId,
+            userId: t.userId,
+            eventId: t.eventId,
+            ticketCode: t.ticketCode,
+            ticketTypeId: t.ticketTypeId,
+            files: {
+              create: {
+                fileType: "PDF",
+                s3Url: t.s3Url
+              }
+            }
+          },
+          include: { files: true }
+        });
+        results.push(ticket);
+      }
+      return results;
+    });
+
+    return res.status(201).json({ tickets: createdTickets });
+  } catch (error) {
+    console.error("Failed to create tickets", error);
+    return res.status(500).json({ message: "Failed to create tickets" });
+  }
+};
+
+
 export const confirmBooking = async (req, res) => {
   const bookingId = parsePositiveInt(req.params.bookingId);
   if (!bookingId) {
@@ -240,6 +315,7 @@ export const confirmBooking = async (req, res) => {
 
   try {
     const result = await prisma.$transaction(async (tx) => {
+
       const booking = await tx.booking.findUnique({ where: { id: bookingId } });
       if (!booking) {
         const error = new Error("BOOKING_NOT_FOUND");
@@ -279,6 +355,26 @@ export const confirmBooking = async (req, res) => {
 
       return { booking: updatedBooking, changed: true };
     });
+
+    console.log(result)
+
+    if (result.changed) {
+      try {
+        const queueUrl = process.env.TICKET_GENERATION_QUEUE_URL;
+        if (queueUrl) {
+          await sqsClient.send(new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify({ bookingId: result.booking.id, userId: result.booking.userId }),
+          }));
+          console.log(`[confirmBooking] Sent ticket generation message for booking ${bookingId}`);
+        } else {
+          console.warn(`[confirmBooking] TICKET_GENERATION_QUEUE_URL not set, skipping SQS message`);
+        }
+      } catch (sqsError) {
+        console.error(`[confirmBooking] Failed to send SQS message:`, sqsError);
+        // Do not fail the request, the booking is already confirmed
+      }
+    }
 
     return res.status(200).json({
       booking: result.booking,

@@ -19,6 +19,10 @@ const userSchema = new Schema(
       type: String,
       default: "active",
     },
+    role: {
+      type: Schema.Types.ObjectId,
+      ref: "Role",
+    },
   },
   {
     timestamps: true,
