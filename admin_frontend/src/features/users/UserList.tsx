@@ -104,17 +104,9 @@ export function UserList() {
                     </Button>
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="end" className="w-40">
-                    <DropdownMenuItem className="gap-2">
-                      <Edit className="h-4 w-4" />
-                      Edit User
-                    </DropdownMenuItem>
-                    <DropdownMenuItem className="gap-2">
-                      <Shield className="h-4 w-4" />
-                      Manage Roles
-                    </DropdownMenuItem>
                     <DropdownMenuItem 
                       className="gap-2 text-red-600 focus:text-red-600"
-                      onClick={() => handleDelete(user.id)}
+                      onSelect={() => handleDelete(user.id)}
                     >
                       <UserX className="h-4 w-4" />
                       Delete User

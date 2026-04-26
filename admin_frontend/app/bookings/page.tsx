@@ -35,14 +35,6 @@ export default function BookingsPage() {
             {expireStale.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
             Cleanup Stale
           </Button>
-          <Button variant="outline" className="gap-2 border-slate-200">
-            <Filter className="h-4 w-4" />
-            Filters
-          </Button>
-          <Button className="gap-2 bg-slate-900 hover:bg-slate-800 shadow-md">
-            <Download className="h-4 w-4" />
-            Download CSV
-          </Button>
         </div>
       </div>
 

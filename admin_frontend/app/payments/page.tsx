@@ -13,14 +13,6 @@ export default function PaymentsPage() {
           <p className="text-slate-500 mt-1 text-left">Audit all successfully processed payments and manage refund offsets.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2 border-slate-200 text-slate-600">
-            <Filter className="h-4 w-4" />
-            Filter
-          </Button>
-          <Button variant="outline" className="gap-2 border-slate-200 text-slate-600">
-            <Download className="h-4 w-4" />
-            Export CSV
-          </Button>
         </div>
       </div>
 

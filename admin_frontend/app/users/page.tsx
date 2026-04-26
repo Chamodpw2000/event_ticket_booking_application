@@ -32,10 +32,6 @@ export default function UsersPage() {
           <p className="text-slate-500 mt-1">Manage system personnel, customers, and their permission profiles.</p>
         </div>
         <div className="flex items-center gap-3">
-          <Button variant="outline" className="gap-2 border-slate-200">
-            <Download className="h-4 w-4" />
-            Export Data
-          </Button>
 
           <Dialog open={isCreateOpen} onOpenChange={setIsCreateOpen}>
             <DialogTrigger asChild>

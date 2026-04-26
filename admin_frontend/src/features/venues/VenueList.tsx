@@ -31,12 +31,11 @@ export function VenueList() {
             <TableHead className="font-semibold text-slate-700">Location</TableHead>
             <TableHead className="font-semibold text-slate-700">Capacity</TableHead>
             <TableHead className="font-semibold text-slate-700">Status</TableHead>
-            <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {venues?.map((venue) => (
-            <TableRow key={venue._id} className="hover:bg-slate-50/50 transition-colors">
+            <TableRow key={venue._id} className="hover:bg-slate-50/50 transition-colors text-left">
               <TableCell>
                 <div className="flex flex-col">
                   <span className="font-bold text-slate-900">{venue.name}</span>
@@ -68,11 +67,6 @@ export function VenueList() {
                 >
                   {venue.isActive ? "Active" : "Inactive"}
                 </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                  <MoreVertical className="h-4 w-4" />
-                </Button>
               </TableCell>
             </TableRow>
           ))}

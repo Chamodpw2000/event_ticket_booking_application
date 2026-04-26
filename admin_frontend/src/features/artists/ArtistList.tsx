@@ -30,12 +30,11 @@ export function ArtistList() {
             <TableHead className="font-semibold text-slate-700">Artist</TableHead>
             <TableHead className="font-semibold text-slate-700">Genre</TableHead>
             <TableHead className="font-semibold text-slate-700">Status</TableHead>
-            <TableHead className="text-right font-semibold text-slate-700">Actions</TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
           {artists?.map((artist) => (
-            <TableRow key={artist._id} className="hover:bg-slate-50/50 transition-colors">
+            <TableRow key={artist._id} className="hover:bg-slate-50/50 transition-colors text-left">
               <TableCell>
                 <div className="flex items-center gap-3">
                   <div className="h-10 w-10 rounded-full bg-slate-100 flex items-center justify-center text-slate-400 overflow-hidden">
@@ -66,16 +65,6 @@ export function ArtistList() {
                 >
                   {artist.isActive ? "Active" : "Inactive"}
                 </Badge>
-              </TableCell>
-              <TableCell className="text-right">
-                <div className="flex items-center justify-end gap-2">
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                    <ExternalLink className="h-4 w-4" />
-                  </Button>
-                  <Button variant="ghost" size="icon" className="h-8 w-8 text-slate-400">
-                    <MoreVertical className="h-4 w-4" />
-                  </Button>
-                </div>
               </TableCell>
             </TableRow>
           ))}

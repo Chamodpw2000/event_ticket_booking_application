@@ -157,10 +157,6 @@ export function EventList() {
                         <ExternalLink className="h-4 w-4" />
                         View Full Details
                       </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2">
-                        <Edit className="h-4 w-4" />
-                        Edit Details
-                      </DropdownMenuItem>
                       <DropdownMenuItem 
                         className="gap-2 text-blue-600 focus:text-blue-600"
                         onClick={() => handleOpenSaga(event.id)}
@@ -174,10 +170,6 @@ export function EventList() {
                       >
                         <UserPlus className="h-4 w-4" />
                         Assign Artists
-                      </DropdownMenuItem>
-                      <DropdownMenuItem className="gap-2">
-                        <ExternalLink className="h-4 w-4" />
-                        View Live Page
                       </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
