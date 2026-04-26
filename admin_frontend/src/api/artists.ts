@@ -14,12 +14,12 @@ export interface Artist {
 
 export const artistService = {
   getAll: async (): Promise<Artist[]> => {
-    const response = await artistClient.get("/");
+    const response = await artistClient.get("/artists");
     return response.data;
   },
 
   create: async (data: any): Promise<Artist> => {
-    const response = await artistClient.post("/", data);
+    const response = await artistClient.post("/artists", data);
     return response.data;
-  }
+  },
 };

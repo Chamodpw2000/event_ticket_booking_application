@@ -27,27 +27,27 @@ export interface User {
 
 export const userService = {
   getAll: async (): Promise<User[]> => {
-    const response = await userClient.get("/");
+    const response = await userClient.get("/users");
     return response.data;
   },
 
   getById: async (id: string): Promise<User> => {
-    const response = await userClient.get(`/${id}`);
+    const response = await userClient.get(`/users/${id}`);
     return response.data;
   },
 
   create: async (data: any): Promise<User> => {
-    const response = await userClient.post("/", data);
+    const response = await userClient.post("/users", data);
     return response.data;
   },
 
   update: async (id: string, data: any): Promise<User> => {
-    const response = await userClient.put(`/${id}`, data);
+    const response = await userClient.put(`/users/${id}`, data);
     return response.data;
   },
 
   delete: async (id: string): Promise<void> => {
-    await userClient.delete(`/${id}`);
+    await userClient.delete(`/users/${id}`);
   },
 
   getAllRoles: async (): Promise<UserRole[]> => {

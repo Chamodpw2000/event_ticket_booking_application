@@ -18,12 +18,12 @@ export interface Venue {
 
 export const venueService = {
   getAll: async (): Promise<Venue[]> => {
-    const response = await venueClient.get("/");
+    const response = await venueClient.get("/venues");
     return response.data;
   },
 
   create: async (data: any): Promise<Venue> => {
-    const response = await venueClient.post("/", data);
+    const response = await venueClient.post("/venues", data);
     return response.data;
   }
 };

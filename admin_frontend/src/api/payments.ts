@@ -19,7 +19,7 @@ export interface Payment {
 
 export const paymentService = {
   getAll: async (): Promise<Payment[]> => {
-    const response = await paymentClient.get("/");
+    const response = await paymentClient.get("/payments");
     return response.data;
   },
 

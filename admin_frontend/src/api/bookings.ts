@@ -15,17 +15,17 @@ export interface Booking {
 
 export const bookingService = {
   getAll: async (): Promise<Booking[]> => {
-    const response = await bookingClient.get("/");
+    const response = await bookingClient.get("/bookings");
     return response.data;
   },
 
   getById: async (id: number): Promise<{ booking: Booking }> => {
-    const response = await bookingClient.get(`/${id}`);
+    const response = await bookingClient.get(`/bookings/${id}`);
     return response.data;
   },
 
   confirm: async (id: number, reason?: string): Promise<any> => {
-    const response = await bookingClient.post(`/${id}/confirm`, { reason });
+    const response = await bookingClient.post(`/bookings/${id}/confirm`, { reason });
     return response.data;
   },
 

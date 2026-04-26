@@ -37,32 +37,32 @@ export interface Event {
 
 export const eventService = {
   getAll: async (): Promise<Event[]> => {
-    const response = await eventClient.get("/");
+    const response = await eventClient.get("/events");
     return response.data;
   },
 
   getById: async (id: number): Promise<Event> => {
-    const response = await eventClient.get(`/${id}`);
+    const response = await eventClient.get(`/events/${id}`);
     return response.data;
   },
 
   create: async (data: Partial<Event>): Promise<Event> => {
-    const response = await eventClient.post("/", data);
+    const response = await eventClient.post("/events", data);
     return response.data;
   },
 
   addTicketType: async (eventId: number, data: any) => {
-    const response = await eventClient.post(`/${eventId}/ticket-types`, data);
+    const response = await eventClient.post(`/events/${eventId}/ticket-types`, data);
     return response.data;
   },
 
   addTicketWithInventorySaga: async (data: any): Promise<any> => {
-    const response = await eventClient.post("/ticket-types/saga", data);
+    const response = await eventClient.post("/events/ticket-types/saga", data);
     return response.data;
   },
 
   addArtists: async (eventId: number, artistIds: number[]): Promise<any> => {
-    const response = await eventClient.post(`/${eventId}/artists`, { artistIds });
+    const response = await eventClient.post(`/events/${eventId}/artists`, { artistIds });
     return response.data;
   },
 };
