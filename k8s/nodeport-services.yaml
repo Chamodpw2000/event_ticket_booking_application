@@ -43,14 +43,28 @@ spec:
 apiVersion: v1
 kind: Service
 metadata:
-  name: ticket-service-np
+  name: booking-service-np
 spec:
   selector:
-    app: ticket-service
+    app: booking-service
   ports:
     - port: 3003
       targetPort: 3003
       nodePort: 30003
+  type: NodePort
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service-np
+spec:
+  selector:
+    app: inventory-service
+  ports:
+    - port: 3007
+      targetPort: 3007
+      nodePort: 30007
   type: NodePort
 
 ---

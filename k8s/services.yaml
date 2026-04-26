@@ -13,12 +13,12 @@ spec:
         app: artist-service
     spec:
       initContainers:
-        - name: wait-for-mysql
-          image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+        - name: wait-for-mongodb
+          image: mongo:7
+          command: ['sh', '-c', 'until mongosh --host mongodb-artist-service --eval "db.adminCommand({ping:1})" --quiet; do echo waiting for mongodb-artist; sleep 3; done']
       containers:
         - name: artist-service
-          image: tiransarith/artist_service:v1
+          image: tiransarith/artist_service:latest
           ports:
             - containerPort: 3004
           env:
@@ -59,10 +59,10 @@ spec:
       initContainers:
         - name: wait-for-mysql
           image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+          command: ['sh', '-c', 'until mysqladmin ping -h mysql-event-service -u root -pMyNewPass123! --silent; do echo waiting for mysql-event; sleep 3; done']
       containers:
         - name: event-service
-          image: tiransarith/event_service:v1
+          image: tiransarith/event_service:latest
           ports:
             - containerPort: 3001
           env:
@@ -103,10 +103,10 @@ spec:
       initContainers:
         - name: wait-for-mysql
           image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+          command: ['sh', '-c', 'until mysqladmin ping -h mysql-payment-service -u root -pMyNewPass123! --silent; do echo waiting for mysql-payment; sleep 3; done']
       containers:
         - name: payment-service
-          image: tiransarith/payment_service:v1
+          image: tiransarith/payment_service:latest
           ports:
             - containerPort: 3006
           env:
@@ -133,24 +133,24 @@ spec:
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: ticket-service
+  name: booking-service
 spec:
   replicas: 1
   selector:
     matchLabels:
-      app: ticket-service
+      app: booking-service
   template:
     metadata:
       labels:
-        app: ticket-service
+        app: booking-service
     spec:
       initContainers:
         - name: wait-for-mysql
           image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+          command: ['sh', '-c', 'until mysqladmin ping -h mysql-booking-service -u root -pMyNewPass123! --silent; do echo waiting for mysql-booking; sleep 3; done']
       containers:
-        - name: ticket-service
-          image: tiransarith/ticket_service:v1
+        - name: booking-service
+          image: tiransarith/booking_service:latest
           ports:
             - containerPort: 3003
           env:
@@ -158,19 +158,63 @@ spec:
               valueFrom:
                 secretKeyRef:
                   name: app-secrets
-                  key: DATABASE_URL_TICKET
+                  key: DATABASE_URL_BOOKING
 
 ---
 apiVersion: v1
 kind: Service
 metadata:
-  name: ticket-service
+  name: booking-service
 spec:
   selector:
-    app: ticket-service
+    app: booking-service
   ports:
     - port: 3003
       targetPort: 3003
+  type: ClusterIP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: inventory-service
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+  template:
+    metadata:
+      labels:
+        app: inventory-service
+    spec:
+      initContainers:
+        - name: wait-for-mysql
+          image: mysql:8.0
+          command: ['sh', '-c', 'until mysqladmin ping -h mysql-inventory-service -u root -pMyNewPass123! --silent; do echo waiting for mysql-inventory; sleep 3; done']
+      containers:
+        - name: inventory-service
+          image: tiransarith/inventory_service:latest
+          ports:
+            - containerPort: 3007
+          env:
+            - name: DATABASE_URL
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: DATABASE_URL_INVENTORY
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: inventory-service
+spec:
+  selector:
+    app: inventory-service
+  ports:
+    - port: 3007
+      targetPort: 3007
   type: ClusterIP
 
 ---
@@ -189,12 +233,12 @@ spec:
         app: user-service
     spec:
       initContainers:
-        - name: wait-for-mysql
-          image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+        - name: wait-for-mongodb
+          image: mongo:7
+          command: ['sh', '-c', 'until mongosh --host mongodb-user-service --eval "db.adminCommand({ping:1})" --quiet; do echo waiting for mongodb-user; sleep 3; done']
       containers:
         - name: user-service
-          image: tiransarith/user_service:v1
+          image: tiransarith/user_service:latest
           ports:
             - containerPort: 3002
           env:
@@ -238,12 +282,12 @@ spec:
         app: venue-service
     spec:
       initContainers:
-        - name: wait-for-mysql
-          image: mysql:8.0
-          command: ['sh', '-c', 'until mysqladmin ping -h mysql-service -u root -pMyNewPass123! --silent; do echo waiting for mysql; sleep 3; done']
+        - name: wait-for-mongodb
+          image: mongo:7
+          command: ['sh', '-c', 'until mongosh --host mongodb-venue-service --eval "db.adminCommand({ping:1})" --quiet; do echo waiting for mongodb-venue; sleep 3; done']
       containers:
         - name: venue-service
-          image: tiransarith/venue_service:v1
+          image: tiransarith/venue_service:latest
           ports:
             - containerPort: 3005
           env:

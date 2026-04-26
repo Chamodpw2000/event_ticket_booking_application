@@ -30,13 +30,20 @@ spec:
                 name: payment-service
                 port:
                   number: 3006
-          - path: /api/tickets
+          - path: /api/bookings
             pathType: Prefix
             backend:
               service:
-                name: ticket-service
+                name: booking-service
                 port:
                   number: 3003
+          - path: /api/inventory
+            pathType: Prefix
+            backend:
+              service:
+                name: inventory-service
+                port:
+                  number: 3007
           - path: /api/users
             pathType: Prefix
             backend:
