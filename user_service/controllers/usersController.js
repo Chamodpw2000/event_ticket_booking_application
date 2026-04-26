@@ -1,10 +1,9 @@
 import { createHash } from "node:crypto";
 import jwt from "jsonwebtoken";
-import mongoose from "mongoose";
+
 import User from "../models/User.js";
 import Role from "../models/Role.js";
 import UserProfile from "../models/UserProfile.js";
-import UserRole from "../models/UserRole.js";
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -17,15 +16,7 @@ const parseObjectId = (rawId) => {
   return OBJECT_ID_REGEX.test(id) ? id : null;
 };
 
-const normalizeRoleIds = (roleIds) => {
-  if (!Array.isArray(roleIds)) {
-    return [];
-  }
 
-  return [...new Set(roleIds.map((id) => String(id ?? "").trim()))].filter((id) =>
-    OBJECT_ID_REGEX.test(id),
-  );
-};
 
 const signToken = (user) => {
   const jwtSecret = process.env.JWT_SECRET;
@@ -62,42 +53,29 @@ const mapProfile = (profile) =>
       }
     : null;
 
-const mapUser = (user, profile, roles) => ({
+const mapUser = (user, profile, role) => ({
   id: String(user._id),
   email: user.email,
   status: user.status,
   createdAt: user.createdAt,
   updatedAt: user.updatedAt,
   userProfile: mapProfile(profile),
-  roles,
+  role,
 });
 
 const getApiUserById = async (userId) => {
-  const [user, profile, userRoles] = await Promise.all([
-    User.findById(userId).lean(),
+  const [user, profile] = await Promise.all([
+    User.findById(userId).populate("role", "name").lean(),
     UserProfile.findOne({ userId }).lean(),
-    UserRole.find({ userId }).populate("roleId", "name").lean(),
   ]);
 
   if (!user) {
     return null;
   }
 
-  const roles = userRoles
-    .filter((item) => item.roleId)
-    .map((item) => mapRole(item.roleId));
+  const role = user.role ? mapRole(user.role) : null;
 
-  return mapUser(user, profile, roles);
-};
-
-const ensureRoleIdsExist = async (normalizedRoleIds) => {
-  if (normalizedRoleIds.length === 0) {
-    return true;
-  }
-
-  const objectIds = normalizedRoleIds.map((id) => new mongoose.Types.ObjectId(id));
-  const count = await Role.countDocuments({ _id: { $in: objectIds } });
-  return count === normalizedRoleIds.length;
+  return mapUser(user, profile, role);
 };
 
 export const createUser = async (req, res) => {
@@ -222,7 +200,7 @@ export const getUserById = async (req, res) => {
 
 export const updateUser = async (req, res) => {
   const userId = parseObjectId(req.params.id);
-  const { email, password, status, profile, roleIds } = req.body;
+  const { email, password, status, profile, roleId } = req.body;
 
   if (!userId) {
     return res.status(400).json({ message: "invalid user id" });
@@ -233,17 +211,17 @@ export const updateUser = async (req, res) => {
     password === undefined &&
     status === undefined &&
     profile === undefined &&
-    roleIds === undefined
+    roleId === undefined
   ) {
     return res.status(400).json({ message: "no fields provided to update" });
   }
 
-  const normalizedRoleIds = normalizeRoleIds(roleIds);
-
-  if (roleIds !== undefined && normalizedRoleIds.length !== new Set(roleIds).size) {
-    return res.status(400).json({
-      message: "roleIds must be an array of valid ids",
-    });
+  let parsedRoleId;
+  if (roleId !== undefined && roleId !== null) {
+    parsedRoleId = parseObjectId(roleId);
+    if (!parsedRoleId) {
+      return res.status(400).json({ message: "roleId must be a valid id" });
+    }
   }
 
   if (profile !== undefined && profile !== null && typeof profile !== "object") {
@@ -277,10 +255,10 @@ export const updateUser = async (req, res) => {
       return res.status(404).json({ message: "user not found" });
     }
 
-    if (roleIds !== undefined) {
-      const rolesExist = await ensureRoleIdsExist(normalizedRoleIds);
-      if (!rolesExist) {
-        return res.status(400).json({ message: "one or more roleIds do not exist" });
+    if (parsedRoleId) {
+      const roleExists = await Role.exists({ _id: parsedRoleId });
+      if (!roleExists) {
+        return res.status(400).json({ message: "roleId does not exist" });
       }
     }
 
@@ -296,6 +274,10 @@ export const updateUser = async (req, res) => {
 
     if (status !== undefined) {
       updateData.status = String(status);
+    }
+
+    if (roleId !== undefined) {
+      updateData.role = parsedRoleId || null;
     }
 
     if (Object.keys(updateData).length > 0) {
@@ -346,18 +328,7 @@ export const updateUser = async (req, res) => {
       }
     }
 
-    if (roleIds !== undefined) {
-      await UserRole.deleteMany({ userId });
 
-      if (normalizedRoleIds.length > 0) {
-        await UserRole.insertMany(
-          normalizedRoleIds.map((roleId) => ({
-            userId,
-            roleId: new mongoose.Types.ObjectId(roleId),
-          })),
-        );
-      }
-    }
 
     const updatedUser = await getApiUserById(userId);
     return res.status(200).json(updatedUser);
@@ -386,10 +357,7 @@ export const deleteUser = async (req, res) => {
       return res.status(404).json({ message: "user not found" });
     }
 
-    await Promise.all([
-      UserRole.deleteMany({ userId }),
-      UserProfile.deleteMany({ userId }),
-    ]);
+    await UserProfile.deleteMany({ userId });
 
     return res.status(200).json({ message: "user deleted successfully" });
   } catch (error) {
