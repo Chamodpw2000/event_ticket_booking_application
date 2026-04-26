@@ -37,3 +37,15 @@ export function useAddTicketSaga() {
     },
   });
 }
+
+export function useAssignArtists() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: ({ eventId, artistIds }: { eventId: number; artistIds: number[] }) => 
+      eventService.addArtists(eventId, artistIds),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["events"] });
+    },
+  });
+}

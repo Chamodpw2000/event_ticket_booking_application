@@ -54,4 +54,13 @@ export const userService = {
     const response = await userClient.get("/roles");
     return response.data;
   },
+
+  createRole: async (name: string): Promise<UserRole> => {
+    const response = await userClient.post("/roles", { name });
+    return response.data;
+  },
+
+  deleteRole: async (id: string): Promise<void> => {
+    await userClient.delete(`/roles/${id}`);
+  },
 };

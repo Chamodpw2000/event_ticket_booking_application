@@ -12,6 +12,8 @@ export interface Event {
   bannerUrl: string | null;
   createdAt: string;
   updatedAt: string;
+  eventTicketTypes: any[];
+  eventArtists: any[];
 }
 
 export const eventService = {
@@ -35,8 +37,13 @@ export const eventService = {
     return response.data;
   },
 
-  addTicketWithInventorySaga: async (data: any) => {
+  addTicketWithInventorySaga: async (data: any): Promise<any> => {
     const response = await eventClient.post("/ticket-types/saga", data);
+    return response.data;
+  },
+
+  addArtists: async (eventId: number, artistIds: number[]): Promise<any> => {
+    const response = await eventClient.post(`/${eventId}/artists`, { artistIds });
     return response.data;
   },
 };
