@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -97,8 +98,11 @@ export default function LoginPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-4 py-12">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Login</CardTitle>
-          <CardDescription>Sign in with your email and password.</CardDescription>
+          <div className="flex justify-center mb-6">
+            <Image src="/logo.png" alt="Tickety Logo" width={80} height={80} className="h-20 w-auto" />
+          </div>
+          <CardTitle className="text-center text-2xl">Login</CardTitle>
+          <CardDescription className="text-center">Sign in with your email and password.</CardDescription>
         </CardHeader>
 
         <CardContent>
