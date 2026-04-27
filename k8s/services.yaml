@@ -1,7 +1,7 @@
 apiVersion: apps/v1
 kind: Deployment
 metadata:
-  name: artist-service
+  name: artist-servic
 spec:
   replicas: 1
   selector:
