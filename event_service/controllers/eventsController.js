@@ -4,10 +4,32 @@ import {
   StartExecutionCommand,
   StartSyncExecutionCommand,
 } from "@aws-sdk/client-sfn";
+import {
+  deleteEventBannerFromS3,
+  uploadEventBannerBase64ToS3,
+} from "../lib/s3UploadBanner.js";
 
-const sfnClient = new SFNClient({
-  region: process.env.AWS_REGION || "us-east-1",
-});
+const getAwsClientConfig = () => {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.AWS_SESSION_TOKEN;
+
+  return {
+    region,
+    ...(accessKeyId && secretAccessKey
+      ? {
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
+            ...(sessionToken ? { sessionToken } : {}),
+          },
+        }
+      : {}),
+  };
+};
+
+const sfnClient = new SFNClient(getAwsClientConfig());
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);
@@ -36,7 +58,7 @@ export const createEvent = async (req, res) => {
     startTime,
     endTime,
     status,
-    bannerUrl,
+    bannerImage,
   } = req.body;
 
   if (!venueId || !title || !startTime || !endTime) {
@@ -72,8 +94,11 @@ export const createEvent = async (req, res) => {
     });
   }
 
+  let createdEventId = null;
+  let uploadedS3Key = null;
+
   try {
-    const event = await prisma.event.create({
+    const createdEvent = await prisma.event.create({
       data: {
         venueId: venueId.trim(),
         title: title.trim(),
@@ -82,8 +107,29 @@ export const createEvent = async (req, res) => {
         startTime: parsedStartTime,
         endTime: parsedEndTime,
         status: typeof status === "string" && status.trim() ? status.trim() : "draft",
-        bannerUrl: bannerUrl?.trim() || null,
+        bannerUrl: null,
       },
+    });
+
+    createdEventId = createdEvent.id;
+
+    let finalBannerUrl = null;
+    if (bannerImage) {
+      const uploadResult = await uploadEventBannerBase64ToS3({
+        eventId: String(createdEvent.id),
+        bannerImageBase64: bannerImage,
+      });
+      finalBannerUrl = uploadResult.url;
+      uploadedS3Key = uploadResult.key;
+
+      await prisma.event.update({
+        where: { id: createdEvent.id },
+        data: { bannerUrl: finalBannerUrl },
+      });
+    }
+
+    const event = await prisma.event.findUnique({
+      where: { id: createdEvent.id },
       include: {
         eventArtists: true,
         eventTicketTypes: true,
@@ -93,6 +139,31 @@ export const createEvent = async (req, res) => {
     return res.status(201).json(event);
   } catch (error) {
     console.error("Failed to create event", error);
+
+    if (uploadedS3Key) {
+      try {
+        await deleteEventBannerFromS3({ key: uploadedS3Key });
+      } catch (cleanupError) {
+        console.error("Failed to cleanup uploaded banner image", cleanupError);
+      }
+    }
+
+    if (createdEventId) {
+      try {
+        await prisma.event.delete({ where: { id: createdEventId } });
+      } catch (cleanupError) {
+        console.error("Failed to cleanup created event after failure", cleanupError);
+      }
+    }
+
+    if (
+      typeof error?.message === "string" &&
+      (error.message.startsWith("bannerImage") ||
+        error.message.startsWith("S3_") ||
+        error.message.startsWith("Unable to determine image"))
+    ) {
+      return res.status(400).json({ message: error.message });
+    }
     return res.status(500).json({ message: "Failed to create event" });
   }
 };

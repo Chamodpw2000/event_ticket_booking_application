@@ -6,13 +6,28 @@ import {
 } from "@aws-sdk/client-sfn";
 import { SQSClient, SendMessageCommand } from "@aws-sdk/client-sqs";
 
-const sfnClient = new SFNClient({
-  region: process.env.AWS_REGION || "us-east-1",
-});
+const getAwsClientConfig = () => {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.AWS_SESSION_TOKEN;
 
-const sqsClient = new SQSClient({
-  region: process.env.AWS_REGION || "us-east-1",
-});
+  return {
+    region,
+    ...(accessKeyId && secretAccessKey
+      ? {
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
+            ...(sessionToken ? { sessionToken } : {}),
+          },
+        }
+      : {}),
+  };
+};
+
+const sfnClient = new SFNClient(getAwsClientConfig());
+const sqsClient = new SQSClient(getAwsClientConfig());
 
 const BOOKING_STATUSES = new Set([
   "PENDING",
