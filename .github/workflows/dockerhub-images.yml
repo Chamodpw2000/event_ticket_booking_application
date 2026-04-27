@@ -11,6 +11,7 @@
 #       - "booking_service/**"
 #       - "user_service/**"
 #       - "venue_service/**"
+#       - "inventory_service/**"
 #       - "docker-compose.yml"
 #       - ".github/workflows/dockerhub-images.yml"
 #   workflow_dispatch:
@@ -26,6 +27,7 @@
 #       booking: ${{ steps.filter.outputs.booking }}
 #       user: ${{ steps.filter.outputs.user }}
 #       venue: ${{ steps.filter.outputs.venue }}
+#       inventory: ${{ steps.filter.outputs.inventory }}
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -47,12 +49,14 @@
 #               - "user_service/**"
 #             venue:
 #               - "venue_service/**"
+#             inventory:
+#               - "inventory_service/**"
 
 #   build-artist:
 #     name: Build and Push Artist Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.artist == 'true'
+#     if: needs.detect-changes.outputs.artist == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -82,7 +86,7 @@
 #     name: Build and Push Event Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.event == 'true'
+#     if: needs.detect-changes.outputs.event == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -117,7 +121,7 @@
 #     name: Build and Push Payment Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.payment == 'true'
+#     if: needs.detect-changes.outputs.payment == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -147,7 +151,7 @@
 #     name: Build and Push Booking Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.booking == 'true'
+#     if: needs.detect-changes.outputs.booking == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -177,7 +181,7 @@
 #     name: Build and Push User Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.user == 'true'
+#     if: needs.detect-changes.outputs.user == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -207,7 +211,7 @@
 #     name: Build and Push Venue Service
 #     runs-on: ubuntu-latest
 #     needs: detect-changes
-#     if: needs.detect-changes.outputs.venue == 'true'
+#     if: needs.detect-changes.outputs.venue == 'true' || github.event_name == 'workflow_dispatch'
 #     steps:
 #       - name: Checkout
 #         uses: actions/checkout@v4
@@ -233,6 +237,35 @@
 #           cache-from: type=gha
 #           cache-to: type=gha,mode=max
 
+#   build-inventory:
+#     name: Build and Push Inventory Service
+#     runs-on: ubuntu-latest
+#     needs: detect-changes
+#     if: needs.detect-changes.outputs.inventory == 'true' || github.event_name == 'workflow_dispatch'
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Set up Docker Buildx
+#         uses: docker/setup-buildx-action@v3
+
+#       - name: Log in to Docker Hub
+#         uses: docker/login-action@v3
+#         with:
+#           username: ${{ secrets.DOCKERHUB_USERNAME }}
+#           password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+#       - name: Build and push inventory image
+#         uses: docker/build-push-action@v6
+#         with:
+#           context: ./inventory_service
+#           file: ./inventory_service/Dockerfile
+#           push: true
+#           tags: |
+#             ${{ secrets.DOCKERHUB_USERNAME }}/inventory_service:latest
+#             ${{ secrets.DOCKERHUB_USERNAME }}/inventory_service:${{ github.sha }}
+#           cache-from: type=gha
+#           cache-to: type=gha,mode=max
 
 name: Build And Push Docker Images
 
@@ -248,6 +281,8 @@ name: Build And Push Docker Images
       - "user_service/**"
       - "venue_service/**"
       - "inventory_service/**"
+      - "admin_frontend/**"
+      - "client_frontend/**"
       - "docker-compose.yml"
       - ".github/workflows/dockerhub-images.yml"
   workflow_dispatch:
@@ -264,6 +299,8 @@ jobs:
       user: ${{ steps.filter.outputs.user }}
       venue: ${{ steps.filter.outputs.venue }}
       inventory: ${{ steps.filter.outputs.inventory }}
+      admin_frontend: ${{ steps.filter.outputs.admin_frontend }}
+      client_frontend: ${{ steps.filter.outputs.client_frontend }}
     steps:
       - name: Checkout
         uses: actions/checkout@v4
@@ -287,6 +324,10 @@ jobs:
               - "venue_service/**"
             inventory:
               - "inventory_service/**"
+            admin_frontend:
+              - "admin_frontend/**"
+            client_frontend:
+              - "client_frontend/**"
 
   build-artist:
     name: Build and Push Artist Service
@@ -500,5 +541,81 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/inventory_service:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/inventory_service:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-admin-frontend:
+    name: Build and Push Admin Frontend
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.admin_frontend == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push admin frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./admin_frontend
+          file: ./admin_frontend/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_EVENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_EVENT_SERVICE_URL }}
+            NEXT_PUBLIC_USER_SERVICE_URL=${{ secrets.NEXT_PUBLIC_USER_SERVICE_URL }}
+            NEXT_PUBLIC_BOOKING_SERVICE_URL=${{ secrets.NEXT_PUBLIC_BOOKING_SERVICE_URL }}
+            NEXT_PUBLIC_ARTIST_SERVICE_URL=${{ secrets.NEXT_PUBLIC_ARTIST_SERVICE_URL }}
+            NEXT_PUBLIC_VENUE_SERVICE_URL=${{ secrets.NEXT_PUBLIC_VENUE_SERVICE_URL }}
+            NEXT_PUBLIC_PAYMENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_PAYMENT_SERVICE_URL }}
+            NEXT_PUBLIC_INVENTORY_SERVICE_URL=${{ secrets.NEXT_PUBLIC_INVENTORY_SERVICE_URL }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/admin_frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/admin_frontend:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  build-client-frontend:
+    name: Build and Push Client Frontend
+    runs-on: ubuntu-latest
+    needs: detect-changes
+    if: needs.detect-changes.outputs.client_frontend == 'true' || github.event_name == 'workflow_dispatch'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Build and push client frontend image
+        uses: docker/build-push-action@v6
+        with:
+          context: ./client_frontend
+          file: ./client_frontend/Dockerfile
+          push: true
+          build-args: |
+            NEXT_PUBLIC_EVENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_EVENT_SERVICE_URL }}
+            NEXT_PUBLIC_USER_SERVICE_URL=${{ secrets.NEXT_PUBLIC_USER_SERVICE_URL }}
+            NEXT_PUBLIC_BOOKING_SERVICE_URL=${{ secrets.NEXT_PUBLIC_BOOKING_SERVICE_URL }}
+            NEXT_PUBLIC_ARTIST_SERVICE_URL=${{ secrets.NEXT_PUBLIC_ARTIST_SERVICE_URL }}
+            NEXT_PUBLIC_VENUE_SERVICE_URL=${{ secrets.NEXT_PUBLIC_VENUE_SERVICE_URL }}
+            NEXT_PUBLIC_PAYMENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_PAYMENT_SERVICE_URL }}
+            NEXT_PUBLIC_INVENTORY_SERVICE_URL=${{ secrets.NEXT_PUBLIC_INVENTORY_SERVICE_URL }}
+          tags: |
+            ${{ secrets.DOCKERHUB_USERNAME }}/client_frontend:latest
+            ${{ secrets.DOCKERHUB_USERNAME }}/client_frontend:${{ github.sha }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
