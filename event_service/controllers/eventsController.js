@@ -5,9 +5,27 @@ import {
   StartSyncExecutionCommand,
 } from "@aws-sdk/client-sfn";
 
-const sfnClient = new SFNClient({
-  region: process.env.AWS_REGION || "us-east-1",
-});
+const getAwsClientConfig = () => {
+  const region = process.env.AWS_REGION || "us-east-1";
+  const accessKeyId = process.env.AWS_ACCESS_KEY_ID;
+  const secretAccessKey = process.env.AWS_SECRET_ACCESS_KEY;
+  const sessionToken = process.env.AWS_SESSION_TOKEN;
+
+  return {
+    region,
+    ...(accessKeyId && secretAccessKey
+      ? {
+          credentials: {
+            accessKeyId,
+            secretAccessKey,
+            ...(sessionToken ? { sessionToken } : {}),
+          },
+        }
+      : {}),
+  };
+};
+
+const sfnClient = new SFNClient(getAwsClientConfig());
 
 const parsePositiveInt = (value) => {
   const parsed = Number(value);

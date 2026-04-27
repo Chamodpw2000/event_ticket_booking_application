@@ -39,6 +39,16 @@ services:
       - "3004:3004"
     environment:
       DATABASE_URL: "mongodb://mongodb:27017/event_platform_artist_db"
+      JSON_BODY_LIMIT: "10mb"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      S3_ARTIST_BUCKET_NAME: "${S3_ARTIST_BUCKET_NAME}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+      S3_ENDPOINT: "${S3_ENDPOINT}"
+      S3_FORCE_PATH_STYLE: "${S3_FORCE_PATH_STYLE}"
+      S3_PUBLIC_BASE_URL: "${S3_PUBLIC_BASE_URL}"
+      PROFILE_IMAGE_MAX_BYTES: "${PROFILE_IMAGE_MAX_BYTES:-5242880}"
     depends_on:
       mongodb:
         condition: service_started
@@ -53,6 +63,11 @@ services:
       - "3001:3001"
     environment:
       DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_event_db"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+      STATE_MACHINE_ARN: "${EVENT_STATE_MACHINE_ARN}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -81,6 +96,11 @@ services:
       - "3006:3006"
     environment:
       DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_payment_db"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+      STATE_MACHINE_ARN: "${PAYMENT_STATE_MACHINE_ARN}"
     depends_on:
       mysql:
         condition: service_healthy
@@ -95,6 +115,12 @@ services:
       - "3003:3003"
     environment:
       DATABASE_URL: "mysql://root:MyNewPass123%21@mysql:3306/event_platform_booking_db"
+      AWS_REGION: "${AWS_REGION:-us-east-1}"
+      AWS_ACCESS_KEY_ID: "${AWS_ACCESS_KEY_ID}"
+      AWS_SECRET_ACCESS_KEY: "${AWS_SECRET_ACCESS_KEY}"
+      AWS_SESSION_TOKEN: "${AWS_SESSION_TOKEN}"
+      STATE_MACHINE_ARN: "${BOOKING_STATE_MACHINE_ARN}"
+      TICKET_GENERATION_QUEUE_URL: "${TICKET_GENERATION_QUEUE_URL}"
     depends_on:
       mysql:
         condition: service_healthy
