@@ -126,12 +126,14 @@ export default async function Home() {
             <p className="text-sm font-semibold uppercase tracking-[0.16em] text-cyan-200">Need Group Bookings?</p>
             <h2 className="mt-2 text-2xl font-semibold text-white">Corporate events, schools, and fan clubs</h2>
           </div>
-          <button
-            type="button"
-            className="rounded-full bg-cyan-300 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200"
+          <a
+            href="https://wa.me/94703660915?text=Hi%20Sales%20Team%2C%20I%20need%20help%20with%20a%20group%20booking."
+            target="_blank"
+            rel="noopener noreferrer"
+            className="inline-flex items-center justify-center rounded-full bg-cyan-300 px-5 py-2.5 text-sm font-semibold text-slate-950 transition hover:bg-cyan-200"
           >
             Contact Sales
-          </button>
+          </a>
         </div>
       </section>
     </main>
