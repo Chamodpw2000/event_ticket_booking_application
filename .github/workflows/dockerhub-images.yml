@@ -818,11 +818,78 @@ jobs:
             fi
           EOF
 
-      - name: Verify deployment
+      - name: Wait for rollouts to complete
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            if [ "${{ needs.detect-changes.outputs.artist }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/artist-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.event }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/event-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.payment }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/payment-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.booking }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/booking-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.user }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/user-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.venue }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/venue-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.inventory }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/inventory-service --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.admin_frontend }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/admin-frontend --timeout=120s
+            fi
+            if [ "${{ needs.detect-changes.outputs.client_frontend }}" == "true" ] || [ "${{ github.event_name }}" == "workflow_dispatch" ]; then
+              kubectl rollout status deployment/client-frontend --timeout=120s
+            fi
+          EOF
+
+      - name: Health check services
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            echo "=== Checking service health ==="
+            services=(
+              "artist-service:30004"
+              "event-service:30001"
+              "user-service:30002"
+              "venue-service:30005"
+              "payment-service:30006"
+              "booking-service:30003"
+              "inventory-service:30007"
+            )
+            for service in "${services[@]}"; do
+              name=$(echo $service | cut -d: -f1)
+              port=$(echo $service | cut -d: -f2)
+              status=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:$port/health)
+              if [ "$status" == "200" ]; then
+                echo "✅ $name is healthy (HTTP $status)"
+              else
+                echo "❌ $name is unhealthy (HTTP $status)"
+                exit 1
+              fi
+            done
+          EOF
+
+      - name: Deployment summary
+        if: always()
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            echo "========================================="
+            echo "         DEPLOYMENT SUMMARY"
+            echo "========================================="
+            echo ""
             echo "=== Pod Status ==="
-            kubectl get pods
-            echo "=== Ingress Status ==="
+            kubectl get pods -o wide
+            echo ""
+            echo "=== Ingress ==="
             kubectl get ingress
+            echo ""
+            echo "=== Recent Warnings ==="
+            kubectl get events --sort-by='.lastTimestamp' | grep -i "error\|warning\|failed" | tail -10
           EOF
