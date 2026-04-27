@@ -14,7 +14,23 @@ type TicketType = {
   availableQuantity: number;
 };
 
-export function BookingPanel({ ticketTypes, eventId }: { ticketTypes: TicketType[], eventId: string }) {
+type BookingPanelProps = {
+  ticketTypes: TicketType[];
+  eventId: string;
+  eventName: string;
+  eventDate: string;
+  eventLocation: string;
+  eventImageUrl: string | null;
+};
+
+export function BookingPanel({
+  ticketTypes,
+  eventId,
+  eventName,
+  eventDate,
+  eventLocation,
+  eventImageUrl,
+}: Readonly<BookingPanelProps>) {
   const router = useRouter();
   const [selections, setSelections] = useState<Record<string, number>>({});
   const [isLoggedIn, setIsLoggedIn] = useState(false);
@@ -87,6 +103,28 @@ export function BookingPanel({ ticketTypes, eventId }: { ticketTypes: TicketType
       if (data.bookingId || data.result?.bookingId) {
         const createdBookingId = data.bookingId || data.result?.bookingId;
         globalThis.window.localStorage.setItem("PENDING_BOOKING_ID", String(createdBookingId));
+        globalThis.window.localStorage.setItem(
+          "PENDING_ORDER_SUMMARY",
+          JSON.stringify({
+            eventId,
+            eventName,
+            eventDate,
+            eventLocation,
+            eventImageUrl,
+            currency: "USD",
+            totalTickets,
+            totalAmount,
+            items: items.map((item) => {
+              const ticket = ticketTypes.find((t) => String(t.id) === String(item.ticketTypeId));
+              return {
+                ticketTypeName: ticket?.name ?? "Ticket",
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                subtotal: item.subtotal,
+              };
+            }),
+          })
+        );
         router.push("/payment");
         return; // prevent setting false submission state if unmounting
       } else {
@@ -190,7 +228,16 @@ export function BookingPanel({ ticketTypes, eventId }: { ticketTypes: TicketType
               </div>
             )}
             
-            {!isLoggedIn ? (
+            {isLoggedIn ? (
+              <button
+                type="button"
+                onClick={handleBookNow}
+                disabled={totalTickets === 0 || isSubmitting}
+                className="w-full rounded-lg bg-cyan-500 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isSubmitting ? "Booking..." : "Book Now"}
+              </button>
+            ) : (
               <div className="text-center">
                 <p className="mb-3 text-sm text-amber-200">Please log in to book tickets.</p>
                 <Link
@@ -200,15 +247,6 @@ export function BookingPanel({ ticketTypes, eventId }: { ticketTypes: TicketType
                   Log In
                 </Link>
               </div>
-            ) : (
-              <button
-                type="button"
-                onClick={handleBookNow}
-                disabled={totalTickets === 0 || isSubmitting}
-                className="w-full rounded-lg bg-cyan-500 py-3 font-semibold text-slate-950 transition hover:bg-cyan-400 disabled:cursor-not-allowed disabled:opacity-50"
-              >
-                {isSubmitting ? "Booking..." : "Book Now"}
-              </button>
             )}
           </div>
         </div>

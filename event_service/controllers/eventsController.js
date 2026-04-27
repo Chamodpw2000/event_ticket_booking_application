@@ -49,6 +49,19 @@ const ensureEventExists = async (eventId) => {
   return Boolean(event);
 };
 
+const getS3KeyFromBannerUrl = (bannerUrl) => {
+  if (!bannerUrl || typeof bannerUrl !== "string") return null;
+
+  try {
+    const parsed = new URL(bannerUrl);
+    const rawPath = parsed.pathname.replace(/^\/+/, "");
+    return rawPath ? decodeURIComponent(rawPath) : null;
+  } catch {
+    // Fallback for malformed URLs or direct key values.
+    return bannerUrl.startsWith("events/") ? bannerUrl : null;
+  }
+};
+
 export const createEvent = async (req, res) => {
   const {
     venueId,
@@ -270,6 +283,198 @@ export const getEvents = async (req, res) => {
   }
 };
 
+export const updateEvent = async (req, res) => {
+  const eventId = parsePositiveInt(req.params.eventId);
+  let uploadedS3Key = null;
+
+  if (!eventId) {
+    return res.status(400).json({ message: "invalid event id" });
+  }
+
+  const {
+    venueId,
+    title,
+    description,
+    category,
+    startTime,
+    endTime,
+    status,
+    bannerImage,
+  } = req.body;
+
+  try {
+    const existingEvent = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: {
+        id: true,
+        venueId: true,
+        title: true,
+        startTime: true,
+        endTime: true,
+        bannerUrl: true,
+      },
+    });
+
+    if (!existingEvent) {
+      return res.status(404).json({ message: "event not found" });
+    }
+
+    const data = {};
+
+    if (venueId !== undefined) {
+      if (typeof venueId !== "string" || venueId.trim() === "") {
+        return res.status(400).json({ message: "venueId must be a non-empty string" });
+      }
+      data.venueId = venueId.trim();
+    }
+
+    if (title !== undefined) {
+      if (typeof title !== "string" || title.trim() === "") {
+        return res.status(400).json({ message: "title must be a non-empty string" });
+      }
+      data.title = title.trim();
+    }
+
+    if (description !== undefined) {
+      data.description = typeof description === "string" && description.trim() ? description.trim() : null;
+    }
+
+    if (category !== undefined) {
+      data.category = typeof category === "string" && category.trim() ? category.trim() : null;
+    }
+
+    if (status !== undefined) {
+      if (typeof status !== "string" || status.trim() === "") {
+        return res.status(400).json({ message: "status must be a non-empty string" });
+      }
+      data.status = status.trim();
+    }
+
+    let nextStartTime = existingEvent.startTime;
+    let nextEndTime = existingEvent.endTime;
+
+    if (startTime !== undefined) {
+      const parsedStartTime = new Date(startTime);
+      if (Number.isNaN(parsedStartTime.getTime())) {
+        return res.status(400).json({ message: "startTime must be a valid ISO date string" });
+      }
+      nextStartTime = parsedStartTime;
+      data.startTime = parsedStartTime;
+    }
+
+    if (endTime !== undefined) {
+      const parsedEndTime = new Date(endTime);
+      if (Number.isNaN(parsedEndTime.getTime())) {
+        return res.status(400).json({ message: "endTime must be a valid ISO date string" });
+      }
+      nextEndTime = parsedEndTime;
+      data.endTime = parsedEndTime;
+    }
+
+    if (nextEndTime <= nextStartTime) {
+      return res.status(400).json({ message: "endTime must be greater than startTime" });
+    }
+
+    let shouldDeleteExistingBanner = false;
+
+    if (bannerImage === null || bannerImage === "") {
+      data.bannerUrl = null;
+      shouldDeleteExistingBanner = Boolean(existingEvent.bannerUrl);
+    } else if (bannerImage !== undefined) {
+      if (typeof bannerImage !== "string") {
+        return res.status(400).json({ message: "bannerImage must be a base64 string" });
+      }
+
+      const uploadResult = await uploadEventBannerBase64ToS3({
+        eventId: String(existingEvent.id),
+        bannerImageBase64: bannerImage,
+      });
+
+      data.bannerUrl = uploadResult.url;
+      uploadedS3Key = uploadResult.key;
+      shouldDeleteExistingBanner = Boolean(existingEvent.bannerUrl);
+    }
+
+    const updatedEvent = await prisma.event.update({
+      where: { id: eventId },
+      data,
+      include: {
+        eventArtists: true,
+        eventTicketTypes: true,
+      },
+    });
+
+    if (shouldDeleteExistingBanner) {
+      const existingS3Key = getS3KeyFromBannerUrl(existingEvent.bannerUrl);
+      if (existingS3Key) {
+        try {
+          await deleteEventBannerFromS3({ key: existingS3Key });
+        } catch (cleanupError) {
+          console.error("Failed to cleanup old banner image", cleanupError);
+        }
+      }
+    }
+
+    return res.status(200).json(updatedEvent);
+  } catch (error) {
+    console.error("Failed to update event", error);
+
+    if (uploadedS3Key) {
+      try {
+        await deleteEventBannerFromS3({ key: uploadedS3Key });
+      } catch (cleanupError) {
+        console.error("Failed to cleanup uploaded banner image", cleanupError);
+      }
+    }
+
+    if (
+      typeof error?.message === "string" &&
+      (error.message.startsWith("bannerImage") ||
+        error.message.startsWith("S3_") ||
+        error.message.startsWith("Unable to determine image"))
+    ) {
+      return res.status(400).json({ message: error.message });
+    }
+
+    return res.status(500).json({ message: "Failed to update event" });
+  }
+};
+
+export const deleteEvent = async (req, res) => {
+  const eventId = parsePositiveInt(req.params.eventId);
+
+  if (!eventId) {
+    return res.status(400).json({ message: "invalid event id" });
+  }
+
+  try {
+    const existingEvent = await prisma.event.findUnique({
+      where: { id: eventId },
+      select: { id: true, bannerUrl: true },
+    });
+
+    if (!existingEvent) {
+      return res.status(404).json({ message: "event not found" });
+    }
+
+    await prisma.event.delete({ where: { id: eventId } });
+
+    const existingS3Key = getS3KeyFromBannerUrl(existingEvent.bannerUrl);
+    if (existingS3Key) {
+      try {
+        await deleteEventBannerFromS3({ key: existingS3Key });
+      } catch (cleanupError) {
+        console.error("Failed to cleanup deleted event banner image", cleanupError);
+      }
+    }
+
+    return res.status(204).send();
+  } catch (error) {
+    console.error("Failed to delete event", error);
+    return res.status(500).json({ message: "Failed to delete event" });
+  }
+};
+
 export const addEventArtists = async (req, res) => {
   const eventId = parsePositiveInt(req.params.eventId);
   const { artistIds } = req.body;
@@ -428,8 +633,8 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
     return res.status(400).json({ message: "totalQuantity must be a positive integer" });
   }
 
-  if (!process.env.STATE_MACHINE_ARN) {
-    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+  if (!process.env.STATE_MACHINE_ARN_TICKET) {
+    return res.status(500).json({ message: "STATE_MACHINE_ARN_TICKET is not configured" });
   }
 
   try {
@@ -445,7 +650,7 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
 
     if (waitForResult) {
       const syncCommand = new StartSyncExecutionCommand({
-        stateMachineArn: process.env.STATE_MACHINE_ARN,
+        stateMachineArn: process.env.STATE_MACHINE_ARN_TICKET,
         input: JSON.stringify(sagaInput),
         name: `ticket-saga-${parsedEventId}-${Date.now()}`,
       });
@@ -474,7 +679,7 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
     }
 
     const command = new StartExecutionCommand({
-      stateMachineArn: process.env.STATE_MACHINE_ARN,
+      stateMachineArn: process.env.STATE_MACHINE_ARN_TICKET,
       name: `ticket-saga-${parsedEventId}-${Date.now()}`,
       input: JSON.stringify(sagaInput),
     });
