@@ -43,3 +43,23 @@ export const getArtists = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch artists" });
   }
 };
+
+export const getArtistById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const artist = await Artist.findById(id);
+
+    if (!artist) {
+      return res.status(404).json({ message: "Artist not found" });
+    }
+
+    return res.status(200).json(artist);
+  } catch (error) {
+    console.error("Failed to fetch artist", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({ message: "Invalid artist id format" });
+    }
+    return res.status(500).json({ message: "Failed to fetch artist" });
+  }
+};
