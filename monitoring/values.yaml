@@ -16,7 +16,8 @@ grafana:
   adminPassword: "admin123"
   grafana.ini:
     server:
-      root_url: "http://44.194.213.136:32399/grafana"
+      domain: "44.194.213.136"
+      root_url: "%(protocol)s://%(domain)s:32399/grafana"
       serve_from_sub_path: true
   resources:
     requests:
