@@ -1,0 +1,346 @@
+# ── mysql-event ───────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-event-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/mysql-event-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k8s-worker-1
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-event-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: mysql-event-pv
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-event
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-event
+  template:
+    metadata:
+      labels:
+        app: mysql-event
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker-1
+      containers:
+        - name: mysql-event
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: event_platform_event_db
+          volumeMounts:
+            - name: mysql-event-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-event-storage
+          persistentVolumeClaim:
+            claimName: mysql-event-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-event-service
+spec:
+  selector:
+    app: mysql-event
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP
+
+---
+# ── mysql-payment ─────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-payment-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/mysql-payment-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k8s-worker-1
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-payment-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: mysql-payment-pv
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-payment
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-payment
+  template:
+    metadata:
+      labels:
+        app: mysql-payment
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker-1
+      containers:
+        - name: mysql-payment
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: event_platform_payment_db
+          volumeMounts:
+            - name: mysql-payment-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-payment-storage
+          persistentVolumeClaim:
+            claimName: mysql-payment-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-payment-service
+spec:
+  selector:
+    app: mysql-payment
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP
+
+---
+# ── mysql-booking ─────────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-booking-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/mysql-booking-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k8s-worker-2
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-booking-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: mysql-booking-pv
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-booking
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-booking
+  template:
+    metadata:
+      labels:
+        app: mysql-booking
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker-2
+      containers:
+        - name: mysql-booking
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: event_platform_booking_db
+          volumeMounts:
+            - name: mysql-booking-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-booking-storage
+          persistentVolumeClaim:
+            claimName: mysql-booking-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-booking-service
+spec:
+  selector:
+    app: mysql-booking
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP
+
+---
+# ── mysql-inventory ───────────────────────────────────────────
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: mysql-inventory-pv
+spec:
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Retain
+  hostPath:
+    path: /mnt/mysql-inventory-data
+  nodeAffinity:
+    required:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: kubernetes.io/hostname
+              operator: In
+              values:
+                - k8s-worker-2
+
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: mysql-inventory-pvc
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 2Gi
+  volumeName: mysql-inventory-pv
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: mysql-inventory
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: mysql-inventory
+  template:
+    metadata:
+      labels:
+        app: mysql-inventory
+    spec:
+      nodeSelector:
+        kubernetes.io/hostname: k8s-worker-2
+      containers:
+        - name: mysql-inventory
+          image: mysql:8.0
+          ports:
+            - containerPort: 3306
+          env:
+            - name: MYSQL_ROOT_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: mysql-secret
+                  key: MYSQL_ROOT_PASSWORD
+            - name: MYSQL_DATABASE
+              value: event_platform_inventory_db
+          volumeMounts:
+            - name: mysql-inventory-storage
+              mountPath: /var/lib/mysql
+      volumes:
+        - name: mysql-inventory-storage
+          persistentVolumeClaim:
+            claimName: mysql-inventory-pvc
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: mysql-inventory-service
+spec:
+  selector:
+    app: mysql-inventory
+  ports:
+    - port: 3306
+      targetPort: 3306
+  type: ClusterIP
