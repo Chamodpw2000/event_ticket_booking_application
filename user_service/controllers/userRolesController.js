@@ -1,5 +1,5 @@
 import Role from "../models/Role.js";
-import UserRole from "../models/UserRole.js";
+
 
 const OBJECT_ID_REGEX = /^[a-f\d]{24}$/i;
 
@@ -120,7 +120,7 @@ export const deleteRole = async (req, res) => {
       return res.status(404).json({ message: "role not found" });
     }
 
-    await UserRole.deleteMany({ roleId });
+
 
     return res.status(200).json({ message: "role deleted successfully" });
   } catch (error) {

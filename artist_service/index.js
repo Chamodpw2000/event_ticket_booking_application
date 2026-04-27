@@ -8,7 +8,7 @@ const app = express();
 const PORT = process.env.PORT || 3004;
 
 app.use(cors());
-app.use(express.json());
+app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "10mb" }));
 
 app.get("/health", (req, res) => {
 	res.status(200).json({ service: "artist_service", status: "ok" });

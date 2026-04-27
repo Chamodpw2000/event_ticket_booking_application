@@ -36,7 +36,7 @@ model InventoryHold {
   eventId      Int
   ticketTypeId Int
   bookingId    Int?
-  userId       Int
+  userId       String
   quantity     Int
   status       InventoryHoldStatus @default(ACTIVE)
   expiresAt    DateTime
