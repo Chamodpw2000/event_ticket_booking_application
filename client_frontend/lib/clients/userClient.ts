@@ -13,6 +13,15 @@ export type LoginResponse = {
   };
 };
 
+export type UserDetailsResponse = {
+  id: string;
+  email: string;
+  userProfile?: {
+    firstName?: string | null;
+    lastName?: string | null;
+  } | null;
+};
+
 export type RegisterRequest = {
   email: string;
   password: string;
@@ -29,7 +38,7 @@ export type RegisterRequest = {
 
 export const userClient = {
   list: () => userApi.get("/users"),
-  byId: (id: string) => userApi.get(`/users/${encodeURIComponent(id)}`),
+  byId: (id: string) => userApi.get<UserDetailsResponse>(`/users/${encodeURIComponent(id)}`),
   register: (payload: RegisterRequest) => userApi.post("/users", payload),
   login: (payload: LoginRequest) => userApi.post<LoginResponse>("/users/login", payload),
 };

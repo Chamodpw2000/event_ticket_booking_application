@@ -10,12 +10,12 @@ export type AuthUser = {
 const AUTH_CHANGED_EVENT = "auth-changed";
 
 export const notifyAuthChanged = () => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
   globalThis.window.dispatchEvent(new Event(AUTH_CHANGED_EVENT));
 };
 
 export const getAuthTokenFromStorage = (): string | null => {
-  if (typeof globalThis.window === "undefined") return null;
+  if (globalThis.window === undefined) return null;
 
   try {
     return globalThis.window.localStorage.getItem(AUTH_TOKEN_STORAGE_KEY);
@@ -25,13 +25,14 @@ export const getAuthTokenFromStorage = (): string | null => {
 };
 
 export const getAuthUserFromStorage = (): AuthUser | null => {
-  if (typeof globalThis.window === "undefined") return null;
+  if (globalThis.window === undefined) return null;
 
   try {
     const raw = globalThis.window.localStorage.getItem(AUTH_USER_STORAGE_KEY);
     if (!raw) return null;
 
     const parsed = JSON.parse(raw) as Partial<AuthUser>;
+    console.log(parsed, "parsed user");
     if (!parsed || typeof parsed !== "object") return null;
     if (typeof parsed.id !== "string" || typeof parsed.email !== "string") return null;
 
@@ -46,7 +47,7 @@ export const getAuthUserFromStorage = (): AuthUser | null => {
 };
 
 export const setAuthTokenToStorage = (token: string) => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
   try {
     globalThis.window.localStorage.setItem(AUTH_TOKEN_STORAGE_KEY, token);
@@ -56,10 +57,9 @@ export const setAuthTokenToStorage = (token: string) => {
 };
 
 export const setAuthUserToStorage = (user: { id: string; email: string; displayName?: string }) => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
-  const displayName =
-    user.displayName ?? (user.email.includes("@") ? user.email.split("@")[0] : user.email);
+  const displayName = user.displayName?.trim() || "User";
 
   try {
     globalThis.window.localStorage.setItem(
@@ -72,7 +72,7 @@ export const setAuthUserToStorage = (user: { id: string; email: string; displayN
 };
 
 export const clearAuthTokenFromStorage = () => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
   try {
     globalThis.window.localStorage.removeItem(AUTH_TOKEN_STORAGE_KEY);
@@ -82,7 +82,7 @@ export const clearAuthTokenFromStorage = () => {
 };
 
 export const clearAuthUserFromStorage = () => {
-  if (typeof globalThis.window === "undefined") return;
+  if (globalThis.window === undefined) return;
 
   try {
     globalThis.window.localStorage.removeItem(AUTH_USER_STORAGE_KEY);

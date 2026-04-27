@@ -1,34 +1,9 @@
-export default function Home() {
-  const featuredEvents = [
-    {
-      name: "Neon Nights Festival",
-      meta: "Electronic · Riverfront Grounds",
-      price: "From $42",
-      date: "Fri, Jun 14",
-      location: "Colombo",
-    },
-    {
-      name: "Champions Derby",
-      meta: "Sports · National Stadium",
-      price: "From $19",
-      date: "Sat, Jun 22",
-      location: "Kandy",
-    },
-    {
-      name: "Broadway Spotlight",
-      meta: "Theatre · Grand Hall",
-      price: "From $28",
-      date: "Sun, Jul 07",
-      location: "Galle",
-    },
-    {
-      name: "Comedy After Dark",
-      meta: "Stand-up · Blue Box Arena",
-      price: "From $16",
-      date: "Thu, Jul 18",
-      location: "Negombo",
-    },
-  ];
+import Link from "next/link";
+
+import { fetchEventCards } from "@/lib/events-data";
+
+export default async function Home() {
+  const featuredEvents = await fetchEventCards({ limit: 8 });
 
   const popularCategories = [
     "Concerts",
@@ -69,29 +44,6 @@ export default function Home() {
               </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/5 p-3">
-              <div className="grid gap-2 md:grid-cols-[1.2fr_0.9fr_0.7fr_auto]">
-                <input
-                  placeholder="Search artist, team, venue..."
-                  className="h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/50"
-                />
-                <input
-                  placeholder="City"
-                  className="h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/50"
-                />
-                <input
-                  placeholder="Any date"
-                  className="h-11 rounded-xl border border-white/10 bg-black/20 px-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-cyan-300/50"
-                />
-                <button
-                  type="button"
-                  className="h-11 rounded-xl bg-amber-400 px-5 text-sm font-semibold text-slate-950 transition hover:bg-amber-300"
-                >
-                  Find Tickets
-                </button>
-              </div>
-            </div>
-
             <div className="flex flex-wrap gap-2">
               {popularCategories.map((category) => (
                 <button
@@ -109,23 +61,33 @@ export default function Home() {
         <section id="events" className="p-6">
           <div className="mb-5 flex items-end justify-between gap-4">
             <div>
-              <p className="text-xs font-semibold uppercase tracking-[0.18em] text-amber-200">
+              <h2 className=" font-semibold uppercase tracking-[0.18em] text-2xl text-amber-200">
                 Trending This Week
-              </p>
-              <h2 className="mt-2 text-2xl font-semibold text-white sm:text-3xl">Popular events near you</h2>
+              </h2>
             </div>
-            <button
-              type="button"
-              className="text-sm font-semibold text-cyan-200 transition hover:text-cyan-100"
+            <Link
+              href="/events"
+              className="inline-flex items-center rounded-full border border-cyan-200/30 bg-cyan-300/15 px-4 py-2 text-sm font-semibold text-cyan-100 shadow-[0_0_0_1px_rgba(34,211,238,0.08)] transition hover:border-cyan-200/50 hover:bg-cyan-300/25 hover:text-white"
             >
               View all events
-            </button>
+            </Link>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
             {featuredEvents.map((item) => (
-              <article key={item.name} className="rounded-2xl border border-white/10 bg-white/5 p-4">
-                <div className="mb-4 h-28 rounded-xl bg-linear-to-br from-cyan-300/35 via-cyan-100/10 to-transparent" />
+              <article key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
+                <div className="mb-4 aspect-1122/1402 w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+                  {item.imageUrl ? (
+                    <img
+                      src={item.imageUrl}
+                      alt={item.name}
+                      className="h-full w-full object-cover"
+                      loading="lazy"
+                    />
+                  ) : (
+                    <div className="h-full w-full bg-linear-to-br from-cyan-300/35 via-cyan-100/10 to-transparent" />
+                  )}
+                </div>
                 <p className="text-xs font-semibold uppercase tracking-[0.16em] text-cyan-200">{item.date}</p>
                 <h3 className="mt-2 text-lg font-semibold text-white">{item.name}</h3>
                 <p className="mt-2 text-sm text-slate-300">{item.meta}</p>

@@ -383,6 +383,11 @@ export const loginUser = async (req, res) => {
       return res.status(401).json({ message: "Invalid email or password" });
     }
 
+    const userProfile = await UserProfile.findOne({ userId: user._id }).lean();
+    const displayName = [userProfile?.firstName?.trim(), userProfile?.lastName?.trim()]
+      .filter(Boolean)
+      .join(" ") || null;
+
     const token = signToken({ id: String(user._id), email: user.email });
 
     return res.status(200).json({
@@ -390,6 +395,7 @@ export const loginUser = async (req, res) => {
       user: {
         id: String(user._id),
         email: user.email,
+        displayName,
       },
     });
   } catch (error) {

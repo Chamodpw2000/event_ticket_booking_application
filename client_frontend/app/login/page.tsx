@@ -51,6 +51,11 @@ export default function LoginPage() {
     return "Login failed.";
   };
 
+  const toDisplayName = (firstName?: string | null, lastName?: string | null) => {
+    const fullName = [firstName?.trim(), lastName?.trim()].filter(Boolean).join(" ");
+    return fullName || "User";
+  };
+
   const onSubmit = async (event: React.SyntheticEvent) => {
     event.preventDefault();
     setError(null);
@@ -67,8 +72,16 @@ export default function LoginPage() {
         password,
       });
 
+      let displayName = "User";
+      try {
+        const userDetails = await userClient.byId(result.user.id);
+        displayName = toDisplayName(userDetails.userProfile?.firstName, userDetails.userProfile?.lastName);
+      } catch {
+        // Keep fallback display name if profile fetch fails.
+      }
+
       setAuthTokenToStorage(result.token);
-      setAuthUserToStorage({ id: result.user.id, email: result.user.email });
+      setAuthUserToStorage({ id: result.user.id, email: result.user.email, displayName });
       notifyAuthChanged();
 
       router.push("/");
