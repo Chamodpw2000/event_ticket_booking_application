@@ -1,4 +1,5 @@
 import axios from "axios";
+import { getToken, clearAuth } from "@/lib/auth";
 
 // Map of services and their base URLs
 export const SERVICES = {
@@ -20,12 +21,30 @@ const createClient = (baseURL: string) => {
     },
   });
 
+  // Request interceptor — attach JWT token to every request
+  client.interceptors.request.use(
+    (config) => {
+      const token = getToken();
+      if (token) {
+        config.headers.Authorization = `Bearer ${token}`;
+      }
+      return config;
+    },
+    (error) => Promise.reject(error)
+  );
+
   // Response interceptor for generic error handling
   client.interceptors.response.use(
     (response) => response,
     (error) => {
+      // If 401, clear auth and redirect to login
+      if (error.response?.status === 401) {
+        clearAuth();
+        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
+          window.location.href = "/login";
+        }
+      }
       const message = error.response?.data?.message || error.message || "An unexpected error occurred";
-      // We can hook into a global toast emitter here later
       return Promise.reject({ ...error, message });
     }
   );
@@ -40,3 +59,4 @@ export const artistClient = createClient(SERVICES.ARTIST);
 export const venueClient = createClient(SERVICES.VENUE);
 export const paymentClient = createClient(SERVICES.PAYMENT);
 export const inventoryClient = createClient(SERVICES.INVENTORY);
+
