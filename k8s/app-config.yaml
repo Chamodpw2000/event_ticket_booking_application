@@ -10,3 +10,6 @@ data:
   # Artist service
   S3_ARTIST_BUCKET_NAME: "artist-profile-image-tickety-2026-uor-e23"
   PROFILE_IMAGE_MAX_BYTES: "5242880"
+  VENUE_SERVICE_URL: "http://venue-service:3005"
+  ARTIST_SERVICE_URL: "http://artist-service:3004"
+  INVENTORY_SERVICE_URL: "http://inventory-service:3007"
