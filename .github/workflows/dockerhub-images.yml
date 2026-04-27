@@ -568,6 +568,7 @@ jobs:
           context: ./admin_frontend
           file: ./admin_frontend/Dockerfile
           push: true
+          no-cache: true
           build-args: |
             NEXT_PUBLIC_EVENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_EVENT_SERVICE_URL }}
             NEXT_PUBLIC_USER_SERVICE_URL=${{ secrets.NEXT_PUBLIC_USER_SERVICE_URL }}
@@ -579,8 +580,6 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/admin_frontend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/admin_frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
 
   build-client-frontend:
     name: Build and Push Client Frontend
@@ -606,6 +605,7 @@ jobs:
           context: ./client_frontend
           file: ./client_frontend/Dockerfile
           push: true
+          no-cache: true
           build-args: |
             NEXT_PUBLIC_EVENT_SERVICE_URL=${{ secrets.NEXT_PUBLIC_EVENT_SERVICE_URL }}
             NEXT_PUBLIC_USER_SERVICE_URL=${{ secrets.NEXT_PUBLIC_USER_SERVICE_URL }}
@@ -617,5 +617,3 @@ jobs:
           tags: |
             ${{ secrets.DOCKERHUB_USERNAME }}/client_frontend:latest
             ${{ secrets.DOCKERHUB_USERNAME }}/client_frontend:${{ github.sha }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
