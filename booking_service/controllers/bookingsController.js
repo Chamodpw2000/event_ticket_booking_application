@@ -623,15 +623,15 @@ export const startCreateBookingSaga = async (req, res) => {
     req.query.waitForResult === "false" ||
     req.body?.waitForResult === false;
 
-  const stateMachineArn = process.env.STATE_MACHINE_ARN?.trim();
+  const stateMachineArn = process.env.STATE_MACHINE_ARN_BOOKING?.trim();
   if (!stateMachineArn) {
-    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+    return res.status(500).json({ message: "STATE_MACHINE_ARN_BOOKING is not configured" });
   }
 
   if (!isStepFunctionsStateMachineArn(stateMachineArn)) {
     return res.status(500).json({
       message:
-        "STATE_MACHINE_ARN must be a Step Functions state machine ARN (arn:aws:states:...:stateMachine:...), not an IAM role ARN.",
+        "STATE_MACHINE_ARN_BOOKING must be a Step Functions state machine ARN (arn:aws:states:...:stateMachine:...), not an IAM role ARN.",
       configuredValue: stateMachineArn,
     });
   }

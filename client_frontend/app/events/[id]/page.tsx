@@ -7,7 +7,7 @@ type PageProps = {
   params: Promise<{ id: string }>;
 };
 
-export default async function EventDetailsPage({ params }: PageProps) {
+export default async function EventDetailsPage({ params }: Readonly<PageProps>) {
   const resolvedParams = await params;
   const event = await fetchEventDetail(resolvedParams.id);
 
@@ -116,7 +116,14 @@ export default async function EventDetailsPage({ params }: PageProps) {
         {/* Sidebar: Right Column */}
         <div className="lg:col-span-1">
           <div className="sticky top-6">
-            <BookingPanel ticketTypes={event.ticketTypes} eventId={event.key} />
+            <BookingPanel
+              ticketTypes={event.ticketTypes}
+              eventId={event.key}
+              eventName={event.name}
+              eventDate={event.date}
+              eventLocation={event.location}
+              eventImageUrl={event.imageUrl ?? null}
+            />
           </div>
         </div>
       </div>

@@ -428,8 +428,8 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
     return res.status(400).json({ message: "totalQuantity must be a positive integer" });
   }
 
-  if (!process.env.STATE_MACHINE_ARN) {
-    return res.status(500).json({ message: "STATE_MACHINE_ARN is not configured" });
+  if (!process.env.STATE_MACHINE_ARN_TICKET) {
+    return res.status(500).json({ message: "STATE_MACHINE_ARN_TICKET is not configured" });
   }
 
   try {
@@ -445,7 +445,7 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
 
     if (waitForResult) {
       const syncCommand = new StartSyncExecutionCommand({
-        stateMachineArn: process.env.STATE_MACHINE_ARN,
+        stateMachineArn: process.env.STATE_MACHINE_ARN_TICKET,
         input: JSON.stringify(sagaInput),
         name: `ticket-saga-${parsedEventId}-${Date.now()}`,
       });
@@ -474,7 +474,7 @@ export const startAddTicketWithInventorySaga = async (req, res) => {
     }
 
     const command = new StartExecutionCommand({
-      stateMachineArn: process.env.STATE_MACHINE_ARN,
+      stateMachineArn: process.env.STATE_MACHINE_ARN_TICKET,
       name: `ticket-saga-${parsedEventId}-${Date.now()}`,
       input: JSON.stringify(sagaInput),
     });
