@@ -94,3 +94,31 @@ spec:
       targetPort: 3005
       nodePort: 30005
   type: NodePort
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-frontend-np
+spec:
+  selector:
+    app: admin-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30008
+  type: NodePort
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-frontend-np
+spec:
+  selector:
+    app: client-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
+      nodePort: 30009
+  type: NodePort
