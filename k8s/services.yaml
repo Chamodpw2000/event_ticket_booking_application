@@ -42,6 +42,21 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: PROFILE_IMAGE_MAX_BYTES
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_REGION
 
 ---
 apiVersion: v1
@@ -106,6 +121,21 @@ spec:
                 configMapKeyRef:
                   name: app-config
                   key: JSON_BODY_LIMIT
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_REGION
 
 ---
 apiVersion: v1
@@ -155,6 +185,21 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: STATE_MACHINE_ARN_PAYMENT
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_REGION
 
 ---
 apiVersion: v1
@@ -209,6 +254,21 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: TICKET_GENERATION_QUEUE_URL
+            - name: AWS_ACCESS_KEY_ID
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_ACCESS_KEY_ID
+            - name: AWS_SECRET_ACCESS_KEY
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_SECRET_ACCESS_KEY
+            - name: AWS_REGION
+              valueFrom:
+                secretKeyRef:
+                  name: app-secrets
+                  key: AWS_REGION
 
 ---
 apiVersion: v1
