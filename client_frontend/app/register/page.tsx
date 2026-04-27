@@ -2,6 +2,7 @@
 
 import * as React from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
 
 import { Button } from "@/components/ui/button";
@@ -85,8 +86,11 @@ export default function RegisterPage() {
     <main className="mx-auto flex min-h-screen w-full max-w-xl items-center px-4 py-12">
       <Card className="w-full">
         <CardHeader>
-          <CardTitle>Create account</CardTitle>
-          <CardDescription>Register with email, password, and your profile details.</CardDescription>
+          <div className="flex justify-center mb-6">
+            <Image src="/logo.png" alt="Tickety Logo" width={80} height={80} className="h-20 w-auto" />
+          </div>
+          <CardTitle className="text-center text-2xl">Create account</CardTitle>
+          <CardDescription className="text-center">Register with email, password, and your profile details.</CardDescription>
         </CardHeader>
 
         <CardContent>
