@@ -55,12 +55,12 @@ export default async function EventsPage({ searchParams }: Readonly<EventsPagePr
               <span className="text-sm font-semibold text-amber-200">{item.location}</span>
               <span className="text-sm font-semibold text-white">{item.price}</span>
             </div>
-            <button
-              type="button"
-              className="mt-4 w-full rounded-lg border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+            <Link
+              href={`/events/${item.key}`}
+              className="mt-4 block w-full rounded-lg border border-white/15 bg-white/5 py-2 text-center text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
             >
               Get Tickets
-            </button>
+            </Link>
           </article>
         ))}
       </section>

@@ -61,6 +61,9 @@ export function AppHeader() {
               <span className="hidden text-sm text-slate-200 sm:inline">
                 {displayName ? `Hello  ${displayName} !` : "Signed in"}
               </span>
+              <Button asChild variant="ghost" size="sm" className="text-slate-100 hover:bg-white/10 hover:text-white">
+                <Link href="/profile">Profile</Link>
+              </Button>
               <Button variant="outline" size="sm" className="border-white/20 bg-white/5 text-white hover:bg-white/10" onClick={handleLogout}>
                 Logout
               </Button>

@@ -95,49 +95,28 @@ export default async function Home() {
                   <span className="text-sm font-semibold text-amber-200">{item.location}</span>
                   <span className="text-sm font-semibold text-white">{item.price}</span>
                 </div>
-                <button
-                  type="button"
-                  className="mt-4 w-full rounded-lg border border-white/15 bg-white/5 py-2 text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
+                <Link
+                  href={`/events/${item.key}`}
+                  className="mt-4 block w-full rounded-lg border border-white/15 bg-white/5 py-2 text-center text-sm font-semibold text-white transition hover:border-white/30 hover:bg-white/10"
                 >
                   Get Tickets
-                </button>
+                </Link>
               </article>
             ))}
           </div>
         </section>
       </div>
 
-      <section className="grid gap-6 lg:grid-cols-[1.1fr_0.9fr]">
+      <section>
         <div className="rounded-[2rem] border border-white/10 bg-white/5 p-6 backdrop-blur-md">
           <h2 className="text-2xl font-semibold text-white">Why people book with Tickety</h2>
-          <div className="mt-5 grid gap-3 sm:grid-cols-2">
+          <div className="mt-5 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
             {trustHighlights.map((item) => (
               <div key={item} className="rounded-xl border border-white/10 bg-black/20 px-4 py-3 text-sm text-slate-200">
                 {item}
               </div>
             ))}
           </div>
-        </div>
-
-        <div className="rounded-[2rem] border border-white/10 bg-linear-to-br from-amber-300/20 via-white/5 to-cyan-300/20 p-6">
-          <p className="text-xs font-semibold uppercase tracking-[0.2em] text-amber-100">Never Miss Out</p>
-          <h2 className="mt-2 text-2xl font-semibold text-white">Get event alerts in your inbox</h2>
-          <p className="mt-3 text-sm leading-6 text-slate-200">
-            Be first to know about presales, venue announcements, and weekend trending events.
-          </p>
-          <div className="mt-5 flex flex-col gap-2 sm:flex-row">
-            <input
-              placeholder="Enter your email"
-              className="h-11 flex-1 rounded-xl border border-white/15 bg-black/20 px-3 text-sm text-white outline-none placeholder:text-slate-400 focus:border-amber-200/60"
-            />
-            <button
-              type="button"
-              className="h-11 rounded-xl bg-white px-4 text-sm font-semibold text-slate-900 transition hover:bg-slate-100"
-            >
-              Subscribe
-            </button>
-          </div>
-          <p className="mt-3 text-xs text-slate-300">No spam. Unsubscribe anytime.</p>
         </div>
       </section>
 

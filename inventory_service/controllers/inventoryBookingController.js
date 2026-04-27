@@ -144,11 +144,13 @@ export const createInventoryHold = async (req, res) => {
 		req.body;
 
 	const parsedEventId = parsePositiveInt(eventId);
-	const parsedUserId = parsePositiveInt(userId);
+	const parsedUserId = typeof userId === "string" && userId.trim().length > 0 
+		? userId.trim() 
+		: (userId ? String(userId).trim() : null);
 
 	if (!parsedEventId || !parsedUserId) {
 		return res.status(400).json({
-			message: "eventId and userId must be positive integers",
+			message: "eventId must be a positive integer and userId must be a non-empty string",
 		});
 	}
 

@@ -11,14 +11,56 @@ export type HomeEventCard = {
 type BackendEvent = {
   id: number | string;
   title?: string | null;
+  description?: string | null;
   category?: string | null;
   startTime?: string | null;
   bannerUrl?: string | null;
-  eventTicketTypes?: Array<{ price?: number | null }>;
+  eventTicketTypes?: Array<{
+    id?: number | string;
+    name?: string | null;
+    price?: number | null;
+    description?: string | null;
+    currency?: string | null;
+    availableQuantity?: number | null;
+  }> | null;
   venueDetails?: {
     name?: string | null;
     city?: string | null;
+    address?: string | null;
   } | null;
+  eventArtists?: Array<{
+    artistId?: string | number | null;
+    artistDetails?: {
+      name?: string | null;
+      bio?: string | null;
+      profileImageUrl?: string | null;
+    } | null;
+  }> | null;
+};
+
+export type EventDetail = {
+  key: string;
+  name: string;
+  description: string;
+  meta: string;
+  price: string;
+  date: string;
+  location: string;
+  imageUrl: string | null;
+  artists: Array<{
+    id: string;
+    name: string;
+    bio: string;
+    imageUrl: string | null;
+  }>;
+  ticketTypes: Array<{
+    id: string;
+    name: string;
+    price: number;
+    currency: string;
+    description: string;
+    availableQuantity: number;
+  }>;
 };
 
 const FALLBACK_EVENTS: HomeEventCard[] = [
@@ -141,5 +183,57 @@ export const fetchEventCards = async (options?: {
   } catch {
     const fallback = filterCards(FALLBACK_EVENTS, options?.query);
     return options?.limit ? fallback.slice(0, options.limit) : fallback;
+  }
+};
+
+export const fetchEventDetail = async (id: string): Promise<EventDetail | null> => {
+  const baseUrl =
+    process.env.EVENT_SERVICE_URL ?? process.env.NEXT_PUBLIC_EVENT_SERVICE_URL ?? "http://localhost:3001";
+
+  try {
+    const response = await fetch(`${baseUrl}/events`, { cache: "no-store" });
+    if (!response.ok) {
+      return null;
+    }
+
+    const payload = (await response.json()) as unknown;
+    if (!Array.isArray(payload)) {
+      return null;
+    }
+
+    const event = payload.find((e) => String((e as BackendEvent).id) === id) as BackendEvent | undefined;
+    if (!event) return null;
+
+    const venueName = event.venueDetails?.name?.trim();
+    const venueCity = event.venueDetails?.city?.trim();
+    const category = event.category?.trim();
+    const categoryLabel = category ? `${category.charAt(0).toUpperCase()}${category.slice(1)}` : null;
+
+    return {
+      key: String(event.id),
+      name: event.title?.trim() || "Untitled Event",
+      description: event.description?.trim() || "No description available.",
+      meta: [categoryLabel, venueName].filter(Boolean).join(" · ") || "Live event",
+      price: formatPriceLabel(event),
+      date: formatDateLabel(event.startTime),
+      location: venueCity || venueName || "Venue TBA",
+      imageUrl: event.bannerUrl?.trim() || null,
+      artists: (event.eventArtists || []).map((ea) => ({
+        id: String(ea.artistId || Math.random()),
+        name: ea.artistDetails?.name?.trim() || "Unknown Artist",
+        bio: ea.artistDetails?.bio?.trim() || "",
+        imageUrl: ea.artistDetails?.profileImageUrl?.trim() || null,
+      })),
+      ticketTypes: (event.eventTicketTypes || []).map((tt) => ({
+        id: String(tt.id || Math.random()),
+        name: tt.name?.trim() || "General Admission",
+        price: Number(tt.price) || 0,
+        currency: tt.currency?.trim() || "USD",
+        description: tt.description?.trim() || "",
+        availableQuantity: Number(tt.availableQuantity) || 0,
+      })),
+    };
+  } catch {
+    return null;
   }
 };

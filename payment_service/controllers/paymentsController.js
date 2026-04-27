@@ -141,13 +141,15 @@ export const createPayment = async (req, res) => {
   }
 
   const parsedBookingId = parsePositiveInt(bookingId);
-  const parsedUserId = parsePositiveInt(userId);
+  const parsedUserId = typeof userId === "string" && userId.trim().length > 0
+    ? userId.trim()
+    : (userId ? String(userId).trim() : null);
   const parsedEventId = parsePositiveInt(eventId);
   const parsedAmount = Number(amount);
 
   if (!parsedBookingId || !parsedUserId || !parsedEventId) {
     return res.status(400).json({
-      message: "bookingId, userId, and eventId must be positive integers",
+      message: "bookingId and eventId must be positive integers, and userId must be a non-empty string",
     });
   }
 

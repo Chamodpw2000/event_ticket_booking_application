@@ -14,7 +14,7 @@ datasource db {
 model Payment {
   id                Int                  @id @default(autoincrement())
   bookingId         Int
-  userId            Int
+  userId            String
   eventId           Int
   amount            Decimal              @db.Decimal(10, 2)
   currency          String

@@ -20,8 +20,13 @@ import { userClient } from "@/lib/clients/userClient";
 export default function RegisterPage() {
   const router = useRouter();
 
+  const [firstName, setFirstName] = React.useState("");
+  const [lastName, setLastName] = React.useState("");
   const [email, setEmail] = React.useState("");
   const [password, setPassword] = React.useState("");
+  const [birthday, setBirthday] = React.useState("");
+  const [bio, setBio] = React.useState("");
+  
   const [error, setError] = React.useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = React.useState(false);
 
@@ -50,8 +55,8 @@ export default function RegisterPage() {
     event.preventDefault();
     setError(null);
 
-    if (!email.trim() || !password) {
-      setError("Email and password are required.");
+    if (!email.trim() || !password || !firstName.trim() || !lastName.trim()) {
+      setError("First name, last name, email, and password are required.");
       return;
     }
 
@@ -60,6 +65,12 @@ export default function RegisterPage() {
       await userClient.register({
         email: email.trim(),
         password,
+        profile: {
+          firstName: firstName.trim(),
+          lastName: lastName.trim(),
+          bio: bio.trim() || undefined,
+          birthday: birthday.trim() || undefined,
+        }
       });
 
       router.push("/login");
@@ -75,11 +86,40 @@ export default function RegisterPage() {
       <Card className="w-full">
         <CardHeader>
           <CardTitle>Create account</CardTitle>
-          <CardDescription>Register with email and password.</CardDescription>
+          <CardDescription>Register with email, password, and your profile details.</CardDescription>
         </CardHeader>
 
         <CardContent>
           <form className="space-y-4" onSubmit={onSubmit}>
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="firstName">
+                  First Name
+                </label>
+                <input
+                  id="firstName"
+                  name="firstName"
+                  type="text"
+                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                  value={firstName}
+                  onChange={(e) => setFirstName(e.target.value)}
+                />
+              </div>
+              <div className="space-y-1.5">
+                <label className="text-sm font-medium" htmlFor="lastName">
+                  Last Name
+                </label>
+                <input
+                  id="lastName"
+                  name="lastName"
+                  type="text"
+                  className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                  value={lastName}
+                  onChange={(e) => setLastName(e.target.value)}
+                />
+              </div>
+            </div>
+
             <div className="space-y-1.5">
               <label className="text-sm font-medium" htmlFor="email">
                 Email
@@ -107,6 +147,34 @@ export default function RegisterPage() {
                 className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="birthday">
+                Birthday (Optional)
+              </label>
+              <input
+                id="birthday"
+                name="birthday"
+                type="date"
+                className="h-10 w-full rounded-lg border border-input bg-background px-3 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                value={birthday}
+                onChange={(e) => setBirthday(e.target.value)}
+              />
+            </div>
+
+            <div className="space-y-1.5">
+              <label className="text-sm font-medium" htmlFor="bio">
+                Bio (Optional)
+              </label>
+              <textarea
+                id="bio"
+                name="bio"
+                rows={3}
+                className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/50"
+                value={bio}
+                onChange={(e) => setBio(e.target.value)}
               />
             </div>
 
