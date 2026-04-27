@@ -1,0 +1,74 @@
+# ── admin-frontend ────────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: admin-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: admin-frontend
+  template:
+    metadata:
+      labels:
+        app: admin-frontend
+    spec:
+      containers:
+        - name: admin-frontend
+          image: tiransarith/admin_frontend:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: admin-frontend
+spec:
+  selector:
+    app: admin-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP
+
+---
+# ── client-frontend ───────────────────────────────────────────
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: client-frontend
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: client-frontend
+  template:
+    metadata:
+      labels:
+        app: client-frontend
+    spec:
+      containers:
+        - name: client-frontend
+          image: tiransarith/client_frontend:latest
+          ports:
+            - containerPort: 3000
+          envFrom:
+            - configMapRef:
+                name: frontend-config
+
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: client-frontend
+spec:
+  selector:
+    app: client-frontend
+  ports:
+    - port: 3000
+      targetPort: 3000
+  type: ClusterIP
