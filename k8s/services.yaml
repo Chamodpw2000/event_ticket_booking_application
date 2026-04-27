@@ -136,6 +136,21 @@ spec:
                 secretKeyRef:
                   name: app-secrets
                   key: AWS_REGION
+            - name: VENUE_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: VENUE_SERVICE_URL
+            - name: ARTIST_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: ARTIST_SERVICE_URL
+            - name: INVENTORY_SERVICE_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: app-config
+                  key: INVENTORY_SERVICE_URL
 
 ---
 apiVersion: v1
