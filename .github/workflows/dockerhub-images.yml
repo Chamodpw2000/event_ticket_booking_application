@@ -730,6 +730,28 @@ jobs:
           chmod 600 ~/.ssh/k8s-key.pem
           ssh-keyscan -H ${{ secrets.K8S_MASTER_HOST }} >> ~/.ssh/known_hosts
 
+      # - name: Install git and sync k8s manifests
+      #   run: |
+      #     ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+      #       if ! command -v git &> /dev/null; then
+      #         sudo apt-get update
+      #         sudo apt-get install -y git
+      #       fi
+
+
+      #       if [ ! -d "$HOME/k8s-manifests" ]; then
+      #         git clone --depth=1 --filter=blob:none --sparse \
+      #           --branch ${{ github.ref_name }} \
+      #           https://github.com/Chamodpw2000/event_ticket_booking_application.git \
+      #           $HOME/k8s-manifests
+      #         cd $HOME/k8s-manifests
+      #         git sparse-checkout set k8s
+      #       else
+      #         cd $HOME/k8s-manifests
+      #         git pull origin ${{ github.ref_name }}
+      #       fi
+      #     EOF
+
       - name: Install git and sync k8s manifests
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
@@ -738,17 +760,15 @@ jobs:
               sudo apt-get install -y git
             fi
 
-            if [ ! -d "$HOME/k8s-manifests" ]; then
-              git clone --depth=1 --filter=blob:none --sparse \
-                --branch ${{ github.ref_name }} \
-                https://github.com/Chamodpw2000/event_ticket_booking_application.git \
-                $HOME/k8s-manifests
-              cd $HOME/k8s-manifests
-              git sparse-checkout set k8s
-            else
-              cd $HOME/k8s-manifests
-              git pull origin ${{ github.ref_name }}
-            fi
+            # Remove old folder if exists to avoid conflicts
+            rm -rf $HOME/k8s-manifests
+
+            git clone --depth=1 --filter=blob:none --sparse \
+              --branch ${{ github.ref_name }} \
+              https://github.com/Chamodpw2000/event_ticket_booking_application.git \
+              $HOME/k8s-manifests
+            cd $HOME/k8s-manifests
+            git sparse-checkout set k8s
           EOF
 
       - name: Apply K8s manifests
