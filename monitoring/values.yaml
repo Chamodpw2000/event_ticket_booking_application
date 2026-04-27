@@ -13,6 +13,8 @@ prometheus:
 
 grafana:
   enabled: true
+  image:
+    tag: "10.4.3"
   adminPassword: "admin123"
   grafana.ini:
     server:
@@ -21,11 +23,11 @@ grafana:
       serve_from_sub_path: true
   resources:
     requests:
-      memory: 128Mi
+      memory: 256Mi
       cpu: 100m
     limits:
-      memory: 256Mi
-      cpu: 200m
+      memory: 512Mi
+      cpu: 300m
   dashboardProviders:
     dashboardproviders.yaml:
       apiVersion: 1
