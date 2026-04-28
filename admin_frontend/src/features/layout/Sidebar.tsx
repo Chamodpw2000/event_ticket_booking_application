@@ -11,10 +11,11 @@ import {
   Music, 
   CreditCard,
   Settings,
-  ChevronRight,
+  LogOut,
   Zap
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { useAuth } from "@/providers/AuthProvider";
 
 const navigationGrouped = [
   {
@@ -43,6 +44,11 @@ const navigationGrouped = [
 
 export function Sidebar() {
   const pathname = usePathname();
+  const { user, logout } = useAuth();
+
+  const initials = user?.email
+    ? user.email.charAt(0).toUpperCase()
+    : "A";
 
   return (
     <aside className="fixed inset-y-0 left-0 z-50 flex w-64 flex-col border-r bg-white shadow-sm transition-all duration-300">
@@ -94,17 +100,24 @@ export function Sidebar() {
       <div className="border-t p-4">
         <div className="flex items-center gap-3 px-2 py-3">
           <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-500 font-bold border border-slate-200">
-            A
+            {initials}
           </div>
-          <div className="flex flex-col">
-            <span className="text-sm font-semibold text-slate-900">Admin User</span>
-            <span className="text-xs text-slate-500">Super Admin</span>
+          <div className="flex flex-col min-w-0 flex-1">
+            <span className="text-sm font-semibold text-slate-900 truncate">
+              {user?.email ?? "Admin User"}
+            </span>
+            <span className="text-xs text-slate-500">Admin</span>
           </div>
-          <Link href="/settings" className="ml-auto p-1.5 rounded-md hover:bg-slate-100 text-slate-400">
-            <Settings className="h-5 w-5" />
-          </Link>
+          <button
+            onClick={logout}
+            title="Sign out"
+            className="ml-auto p-1.5 rounded-md hover:bg-red-50 text-slate-400 hover:text-red-500 transition-colors"
+          >
+            <LogOut className="h-5 w-5" />
+          </button>
         </div>
       </div>
     </aside>
   );
 }
+
