@@ -1,0 +1,75 @@
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: event-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: event-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: payment-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: payment-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: booking-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: booking-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: artist-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: artist-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: inventory-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: inventory-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: user-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: user-service
+
+---
+apiVersion: policy/v1
+kind: PodDisruptionBudget
+metadata:
+  name: venue-service-pdb
+spec:
+  minAvailable: 1
+  selector:
+    matchLabels:
+      app: venue-service
