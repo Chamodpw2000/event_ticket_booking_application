@@ -18,6 +18,11 @@ app.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome to the Inventory Service!" });
 });
 
+// Temporary deployment test endpoint
+app.get("/deploy-test", (req, res) => {
+	res.status(200).send("latest deployment is available");
+});
+
 app.use("/inventory", inventoryRouter);
 
 
