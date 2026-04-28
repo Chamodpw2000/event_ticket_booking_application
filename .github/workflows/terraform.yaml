@@ -106,7 +106,6 @@ name: Terraform Infrastructure
   push:
     branches:
       - dev
-      - tiran3
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
