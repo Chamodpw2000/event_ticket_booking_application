@@ -770,6 +770,35 @@ jobs:
             cd $HOME/k8s-manifests
             git sparse-checkout set k8s
           EOF
+      - name: Install ESO if not installed
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            if ! command -v helm &> /dev/null; then
+              curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+            fi
+
+            if ! helm list -n external-secrets | grep -q external-secrets; then
+              helm repo add external-secrets https://charts.external-secrets.io
+              helm repo update
+              helm install external-secrets \
+                external-secrets/external-secrets \
+                --namespace external-secrets \
+                --create-namespace \
+                --wait
+              echo "ESO installed"
+            else
+              echo "ESO already installed - skipping"
+            fi
+          EOF
+      - name: Create ESO credentials secret
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            kubectl create secret generic aws-eso-credentials \
+              --namespace default \
+              --from-literal=access-key=${{ secrets.ESO_AWS_ACCESS_KEY }} \
+              --from-literal=secret-key=${{ secrets.ESO_AWS_SECRET_KEY }} \
+              --dry-run=client -o yaml | kubectl apply -f -
+          EOF
 
       - name: Apply K8s manifests
         run: |
