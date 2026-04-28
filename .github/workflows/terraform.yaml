@@ -4,6 +4,7 @@ name: Terraform Infrastructure
   push:
     branches:
       - dev
+      - tiran3
     paths:
       - "terraform/**"
       - ".github/workflows/terraform.yml"
@@ -65,18 +66,24 @@ jobs:
             --output text) || true
 
           # Route Table
-          terraform import aws_route_table.main $(aws ec2 describe-route-tables \
+          RTB_ID=$(aws ec2 describe-route-tables \
             --filters "Name=vpc-id,Values=vpc-05c5731d9ebd44d28" \
-                      "Name=association.main,Values=false" \
-            --query "RouteTables[0].RouteTableId" \
-            --output text) || true
+            --query "RouteTables[?Associations[?SubnetId=='subnet-03670014041b3ff5']].RouteTableId" \
+            --output text)
+          echo "Route Table ID: $RTB_ID"
+          if [ "$RTB_ID" != "None" ] && [ -n "$RTB_ID" ]; then
+            terraform import aws_route_table.main $RTB_ID || true
 
-          # Route Table Association
-          terraform import aws_route_table_association.main $(aws ec2 describe-route-tables \
-            --filters "Name=vpc-id,Values=vpc-05c5731d9ebd44d28" \
-                      "Name=association.main,Values=false" \
-            --query "RouteTables[0].Associations[0].RouteTableAssociationId" \
-            --output text) || true
+            # Route Table Association
+            ASSOC_ID=$(aws ec2 describe-route-tables \
+              --route-table-ids $RTB_ID \
+              --query "RouteTables[0].Associations[?SubnetId=='subnet-03670014041b3ff5'].RouteTableAssociationId" \
+              --output text)
+            echo "Association ID: $ASSOC_ID"
+            if [ -n "$ASSOC_ID" ] && [ "$ASSOC_ID" != "None" ]; then
+              terraform import aws_route_table_association.main $ASSOC_ID || true
+            fi
+          fi
 
           # Security Group
           terraform import aws_security_group.k8s sg-09b531e629b36564d || true
@@ -89,16 +96,13 @@ jobs:
           # Elastic IPs
           terraform import aws_eip.k8s_master eipalloc-0a2749747ead779ad || true
           terraform import aws_eip.k8s_worker_1 eipalloc-0ea6539cef039b211 || true
-          terraform import aws_eip.k8s_worker_2 $(aws ec2 describe-addresses \
-            --filters "Name=instance-id,Values=i-0a3ad00c20ecd5e27" \
-            --query "Addresses[0].AllocationId" \
-            --output text) || true
+          terraform import aws_eip.k8s_worker_2 eipalloc-042d40cfa87a00ccb || true
 
       - name: Terraform Plan
         run: |
           cd terraform
           terraform plan -no-color -out=tfplan
-        
+
       - name: Show Plan Summary
         run: |
           cd terraform

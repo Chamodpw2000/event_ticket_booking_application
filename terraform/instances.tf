@@ -10,7 +10,7 @@ resource "aws_instance" "k8s_master" {
 
   root_block_device {
     volume_size = 20
-    volume_type = "gp2"
+    volume_type = "gp3"
   }
 
   lifecycle {
@@ -18,6 +18,11 @@ resource "aws_instance" "k8s_master" {
       ami,
       user_data,
       root_block_device,
+      subnet_id,
+      vpc_security_group_ids,
+      security_groups,
+      associate_public_ip_address,
+      tags,
     ]
   }
 
@@ -40,7 +45,7 @@ resource "aws_instance" "k8s_worker_1" {
 
   root_block_device {
     volume_size = 20
-    volume_type = "gp2"
+    volume_type = "gp3"
   }
 
   lifecycle {
@@ -48,6 +53,11 @@ resource "aws_instance" "k8s_worker_1" {
       ami,
       user_data,
       root_block_device,
+      subnet_id,
+      vpc_security_group_ids,
+      security_groups,
+      associate_public_ip_address,
+      tags,
     ]
   }
 
@@ -70,7 +80,7 @@ resource "aws_instance" "k8s_worker_2" {
 
   root_block_device {
     volume_size = 20
-    volume_type = "gp2"
+    volume_type = "gp3"
   }
 
   lifecycle {
@@ -78,6 +88,11 @@ resource "aws_instance" "k8s_worker_2" {
       ami,
       user_data,
       root_block_device,
+      subnet_id,
+      vpc_security_group_ids,
+      security_groups,
+      associate_public_ip_address,
+      tags,
     ]
   }
 
@@ -95,6 +110,7 @@ resource "aws_eip" "k8s_master" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [instance, tags]
   }
 
   tags = {
@@ -109,6 +125,7 @@ resource "aws_eip" "k8s_worker_1" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [instance, tags]
   }
 
   tags = {
@@ -123,6 +140,7 @@ resource "aws_eip" "k8s_worker_2" {
 
   lifecycle {
     prevent_destroy = true
+    ignore_changes  = [instance, tags]
   }
 
   tags = {

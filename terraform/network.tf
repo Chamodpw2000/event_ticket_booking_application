@@ -51,7 +51,7 @@ resource "aws_route_table" "main" {
   }
 
   lifecycle {
-    ignore_changes = [tags]
+    ignore_changes = [tags, route]
   }
 
   tags = {
