@@ -825,6 +825,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
             cd $HOME/k8s-manifests/k8s
+            kubectl apply -f hpa.yaml
+            kubectl apply -f pdb.yaml
             kubectl apply -f secret-store.yaml
             kubectl apply -f external-secrets.yaml
             kubectl apply -f app-config.yaml
