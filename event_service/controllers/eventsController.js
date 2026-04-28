@@ -457,7 +457,7 @@ export const deleteEvent = async (req, res) => {
       return res.status(404).json({ message: "event not found" });
     }
 
-    await prisma.event.delete({ where: { id: eventId } });
+    const deletedEvent = await prisma.event.delete({ where: { id: eventId } });
 
     const existingS3Key = getS3KeyFromBannerUrl(existingEvent.bannerUrl);
     if (existingS3Key) {
@@ -468,7 +468,7 @@ export const deleteEvent = async (req, res) => {
       }
     }
 
-    return res.status(204).send();
+    return res.status(200).json(deletedEvent);
   } catch (error) {
     console.error("Failed to delete event", error);
     return res.status(500).json({ message: "Failed to delete event" });
