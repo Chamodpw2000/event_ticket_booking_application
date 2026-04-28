@@ -61,14 +61,6 @@
                 "transactionType.$": "$.transactionType"
             },
             "ResultPath": "$.makePaymentInput",
-            "Next": "Store Hold IDs for Compensation"
-        },
-        "Store Hold IDs for Compensation": {
-            "Type": "Pass",
-            "Parameters": {
-                "holdIds.$": "$.checkPaymentAvailabilityResult.Payload.holdIds"
-            },
-            "ResultPath": "$.compensationData",
             "Next": "Make Payment"
         },
         "Make Payment": {
@@ -177,7 +169,7 @@
             "Parameters": {
                 "FunctionName": "arn:aws:lambda:us-east-1:512741504930:function:releaseInventory:$LATEST",
                 "Payload": {
-                    "holdIds.$": "$.compensationData.holdIds"
+                    "holdIds.$": "$.checkPaymentAvailabilityResult.Payload.holdIds"
                 }
             },
             "ResultPath": "$.releaseInventoryResult",
@@ -243,7 +235,7 @@
             "Type": "Pass",
             "Parameters": {
                 "bookingId.$": "$.makePaymentInput.bookingId",
-                "holdIds.$": "$.compensationData.holdIds",
+                "holdIds.$": "$.checkPaymentAvailabilityResult.Payload.holdIds",
                 "paymentId.$": "$.makePaymentResult.Payload.paymentId",
                 "payment.$": "$.makePaymentResult.Payload.payment",
                 "booking.$": "$.confirmBookingResult.Payload.booking"

@@ -71,3 +71,35 @@ export const getHoldIdsForBooking = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch hold IDs for booking" });
   }
 };
+
+export const getInventoryByEvents = async (req, res) => {
+  const { eventIds } = req.query;
+
+  if (!eventIds || typeof eventIds !== "string") {
+    return res.status(400).json({ message: "eventIds query parameter is required" });
+  }
+
+  const parsedEventIds = eventIds
+    .split(",")
+    .map(parsePositiveInt)
+    .filter(Boolean);
+
+  if (parsedEventIds.length === 0) {
+    return res.status(400).json({ message: "eventIds must contain at least one valid positive integer" });
+  }
+
+  try {
+    const inventories = await prisma.eventInventory.findMany({
+      where: {
+        eventId: {
+          in: parsedEventIds,
+        },
+      },
+    });
+
+    return res.status(200).json(inventories);
+  } catch (error) {
+    console.error("Failed to fetch inventory by events", error);
+    return res.status(500).json({ message: "Failed to fetch inventory by events" });
+  }
+};

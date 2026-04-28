@@ -20,6 +20,7 @@ import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Checkbox } from "@/components/ui/checkbox";
 
+import { ImageUpload } from "@/components/ImageUpload";
 import { useCreateArtist } from "@/hooks/useArtists";
 
 const artistSchema = z.object({
@@ -27,7 +28,7 @@ const artistSchema = z.object({
   email: z.string().email("Invalid email address"),
   bio: z.string().default(""),
   genre: z.string().default(""),
-  profileImageUrl: z.string().default(""),
+  profileImage: z.string().default(""),
   isActive: z.boolean().default(true),
 });
 
@@ -47,14 +48,21 @@ export function CreateArtistForm({ onSuccess }: CreateArtistFormProps) {
       email: "",
       bio: "",
       genre: "",
-      profileImageUrl: "",
+      profileImage: "",
       isActive: true,
     },
   });
 
   async function onSubmit(values: ArtistValues) {
     try {
-      await createArtist.mutateAsync(values);
+      await createArtist.mutateAsync({
+        name: values.name,
+        email: values.email,
+        bio: values.bio,
+        genre: values.genre,
+        profileImage: values.profileImage,
+        isActive: values.isActive,
+      });
       toast.success("Artist profile created!");
       onSuccess?.();
     } catch (error: any) {
@@ -65,6 +73,24 @@ export function CreateArtistForm({ onSuccess }: CreateArtistFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4 text-left">
+        <FormField
+          control={form.control}
+          name="profileImage"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <ImageUpload 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                  onRemove={() => field.onChange("")}
+                  label="Artist Profile Image"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="name"
@@ -127,20 +153,6 @@ export function CreateArtistForm({ onSuccess }: CreateArtistFormProps) {
             )}
           />
         </div>
-
-        <FormField
-          control={form.control}
-          name="profileImageUrl"
-          render={({ field }: any) => (
-            <FormItem>
-              <FormLabel>Profile Image URL</FormLabel>
-              <FormControl>
-                <Input placeholder="https://..." {...field} />
-              </FormControl>
-              <FormMessage />
-            </FormItem>
-          )}
-        />
 
         <FormField
           control={form.control}

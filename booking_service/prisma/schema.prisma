@@ -27,7 +27,7 @@ enum TicketStatus {
 
 model Booking {
   id               Int                    @id @default(autoincrement())
-  userId           Int
+  userId           String
   eventId          Int
   bookingReference String                 @unique @db.VarChar(100)
   status           BookingStatus          @default(PENDING)
@@ -72,7 +72,7 @@ model BookingStatusHistory {
 model Ticket {
   id                  Int                   @id @default(autoincrement())
   bookingId           Int
-  userId              Int
+  userId              String
   eventId             Int
   ticketCode          String                @unique @db.VarChar(120)
   ticketTypeId        Int

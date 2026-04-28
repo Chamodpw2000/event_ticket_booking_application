@@ -58,3 +58,23 @@ export const getVenues = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch venues" });
   }
 };
+
+export const getVenueById = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const venue = await Venue.findById(id);
+
+    if (!venue) {
+      return res.status(404).json({ message: "Venue not found" });
+    }
+
+    return res.status(200).json(venue);
+  } catch (error) {
+    console.error("Failed to fetch venue", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({ message: "Invalid venue id format" });
+    }
+    return res.status(500).json({ message: "Failed to fetch venue" });
+  }
+};
