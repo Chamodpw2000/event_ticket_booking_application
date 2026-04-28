@@ -884,6 +884,8 @@ jobs:
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
             echo "=== Checking service health ==="
+            sleep 60
+            
             services=(
               "artist-service:30004"
               "event-service:30001"
