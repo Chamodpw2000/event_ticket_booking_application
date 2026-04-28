@@ -1,3 +1,119 @@
+# name: Deploy Monitoring Stack
+
+# "on":
+#   push:
+#     branches:
+#       - dev
+#     paths:
+#       - "monitoring/**"
+#       - ".github/workflows/monitoring.yml"
+#   workflow_dispatch:
+
+# jobs:
+#   deploy-monitoring:
+#     name: Deploy Prometheus and Grafana
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Setup SSH
+#         run: |
+#           mkdir -p ~/.ssh
+#           echo "${{ secrets.K8S_MASTER_SSH_KEY }}" > ~/.ssh/k8s-key.pem
+#           chmod 600 ~/.ssh/k8s-key.pem
+#           ssh-keyscan -H ${{ secrets.K8S_MASTER_HOST }} >> ~/.ssh/known_hosts
+
+#       - name: Install Helm on k8s-master
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             if ! command -v helm &> /dev/null; then
+#               echo "Installing Helm..."
+#               curl https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3 | bash
+#             else
+#               echo "Helm already installed: $(helm version --short)"
+#             fi
+#           EOF
+
+#       - name: Sync monitoring files to k8s-master
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             if ! command -v git &> /dev/null; then
+#               sudo apt-get update
+#               sudo apt-get install -y git
+#             fi
+
+#             rm -rf $HOME/monitoring-manifests
+
+#             git clone --depth=1 --filter=blob:none --sparse \
+#               --branch ${{ github.ref_name }} \
+#               https://github.com/Chamodpw2000/event_ticket_booking_application.git \
+#               $HOME/monitoring-manifests
+#             cd $HOME/monitoring-manifests
+#             git sparse-checkout set monitoring
+#           EOF
+
+#       - name: Create monitoring namespace
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             kubectl create namespace monitoring --dry-run=client -o yaml | kubectl apply -f -
+#           EOF
+
+#       - name: Add Helm repos
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             helm repo add prometheus-community https://prometheus-community.github.io/helm-charts
+#             helm repo update
+#           EOF
+
+#       - name: Deploy Prometheus and Grafana
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             helm upgrade --install monitoring \
+#               prometheus-community/kube-prometheus-stack \
+#               --namespace monitoring \
+#               --values $HOME/monitoring-manifests/monitoring/values.yaml \
+#               --timeout 10m \
+#               --wait
+#           EOF
+
+#       - name: Apply Grafana ingress
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             kubectl apply -f $HOME/monitoring-manifests/monitoring/grafana-ingress.yaml
+#           EOF
+
+#       - name: Verify monitoring deployment
+#         run: |
+#           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+#             echo "=== Monitoring Pods ==="
+#             kubectl get pods -n monitoring
+
+#             echo ""
+#             echo "=== Monitoring Services ==="
+#             kubectl get services -n monitoring
+
+#             echo ""
+#             echo "=== Grafana Ingress ==="
+#             kubectl get ingress -n monitoring
+#           EOF
+
+#       - name: Print access info
+#         run: |
+#           echo "========================================="
+#           echo "   MONITORING STACK DEPLOYED"
+#           echo "========================================="
+#           echo ""
+#           echo "Grafana URL: http://44.194.213.136:32399/grafana"
+#           echo "Username: admin"
+#           echo "Password: admin123"
+#           echo ""
+#           echo "Pre-installed dashboards:"
+#           echo "  - Kubernetes Cluster Overview"
+#           echo "  - Node Exporter Full"
+#           echo "  - Kubernetes Pods"
+#           echo "========================================="
+
 name: Deploy Monitoring Stack
 
 "on":
@@ -10,8 +126,8 @@ name: Deploy Monitoring Stack
   workflow_dispatch:
 
 jobs:
-  deploy-monitoring:
-    name: Deploy Prometheus and Grafana
+  setup:
+    name: Setup Prerequisites
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -66,6 +182,18 @@ jobs:
             helm repo update
           EOF
 
+  deploy:
+    name: Deploy Prometheus and Grafana
+    runs-on: ubuntu-latest
+    needs: setup
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.K8S_MASTER_SSH_KEY }}" > ~/.ssh/k8s-key.pem
+          chmod 600 ~/.ssh/k8s-key.pem
+          ssh-keyscan -H ${{ secrets.K8S_MASTER_HOST }} >> ~/.ssh/known_hosts
+
       - name: Deploy Prometheus and Grafana
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
@@ -82,6 +210,18 @@ jobs:
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
             kubectl apply -f $HOME/monitoring-manifests/monitoring/grafana-ingress.yaml
           EOF
+
+  verify:
+    name: Verify and Print Access Info
+    runs-on: ubuntu-latest
+    needs: deploy
+    steps:
+      - name: Setup SSH
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.K8S_MASTER_SSH_KEY }}" > ~/.ssh/k8s-key.pem
+          chmod 600 ~/.ssh/k8s-key.pem
+          ssh-keyscan -H ${{ secrets.K8S_MASTER_HOST }} >> ~/.ssh/known_hosts
 
       - name: Verify monitoring deployment
         run: |
