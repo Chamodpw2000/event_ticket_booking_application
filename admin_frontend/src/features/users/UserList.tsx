@@ -81,7 +81,7 @@ export function UserList() {
               </TableCell>
               <TableCell>
                 <div className="flex flex-wrap gap-1">
-                  {user.roles.length > 0 ? (
+                  {user.roles && user.roles.length > 0 ? (
                     user.roles.map((role) => (
                       <Badge key={role.id} variant="secondary" className="bg-blue-50 text-blue-700 hover:bg-blue-100 border-none">
                         {role.name}
