@@ -13,10 +13,6 @@ app.use(express.json({ limit: process.env.JSON_BODY_LIMIT || "10mb" }));
 app.get("/health", (req, res) => {
 	res.status(200).json({ service: "event_service", status: "ok" });
 });
-// Temporary deployment test endpoint
-app.get("/deploy-test", (req, res) => {
-	res.status(200).send("latest deployment is available");
-});
 
 app.get("/", (req, res) => {
     res.status(200).json({ message: "Welcome to the Event Service!" });
