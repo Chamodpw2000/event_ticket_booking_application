@@ -7,6 +7,7 @@ export interface Artist {
   bio?: string;
   genre?: string;
   profileImageUrl?: string;
+  profileImage?: string; // Base64 for creation
   isActive: boolean;
   createdAt: string;
   updatedAt: string;

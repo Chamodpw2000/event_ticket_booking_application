@@ -36,6 +36,8 @@ import { Calendar } from "@/components/ui/calendar";
 import { useCreateEvent } from "@/hooks/useEvents";
 import { useVenues } from "@/hooks/useVenues";
 
+import { ImageUpload } from "@/components/ImageUpload";
+
 // Define schema with strict types that match defaultValues exactly
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
@@ -45,7 +47,7 @@ const formSchema = z.object({
   startTime: z.date(),
   endTime: z.date(),
   status: z.string(),
-  bannerUrl: z.string(),
+  bannerImage: z.string().optional(),
 });
 
 type FormValues = z.infer<typeof formSchema>;
@@ -66,7 +68,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
       category: "Music",
       venueId: "",
       status: "draft",
-      bannerUrl: "",
+      bannerImage: "",
     },
   });
 
@@ -80,7 +82,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
         startTime: values.startTime.toISOString(),
         endTime: values.endTime.toISOString(),
         status: values.status,
-        bannerUrl: values.bannerUrl,
+        bannerImage: values.bannerImage,
       });
       toast.success("Event created successfully!");
       onSuccess?.();
@@ -92,6 +94,24 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6 text-left">
+        <FormField
+          control={form.control}
+          name="bannerImage"
+          render={({ field }) => (
+            <FormItem>
+              <FormControl>
+                <ImageUpload 
+                  value={field.value} 
+                  onChange={field.onChange} 
+                  onRemove={() => field.onChange("")}
+                  label="Event Banner"
+                />
+              </FormControl>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
         <FormField
           control={form.control}
           name="title"

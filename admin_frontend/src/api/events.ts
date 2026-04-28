@@ -29,6 +29,7 @@ export interface Event {
   endTime: string;
   status: string;
   bannerUrl: string | null;
+  bannerImage?: string; // Base64 for creation
   createdAt: string;
   updatedAt: string;
   eventTicketTypes: EventTicketType[];
