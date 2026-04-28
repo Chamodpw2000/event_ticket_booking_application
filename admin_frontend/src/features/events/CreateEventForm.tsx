@@ -4,7 +4,7 @@ import { useForm, UseFormReturn } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import * as z from "zod";
 import { toast } from "sonner";
-import { CalendarIcon, Loader2 } from "lucide-react";
+import { CalendarIcon, Loader2, Clock } from "lucide-react";
 import { format } from "date-fns";
 
 import { cn } from "@/lib/utils";
@@ -187,13 +187,34 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value instanceof Date ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        {field.value instanceof Date ? format(field.value, "PPP p") : <span>Pick a date & time</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                  <PopoverContent className="w-auto p-4 space-y-3" align="start">
+                    <Calendar mode="single" selected={field.value} onSelect={(date) => {
+                      if (!date) return;
+                      const newDate = new Date(date);
+                      if (field.value) {
+                        newDate.setHours(field.value.getHours(), field.value.getMinutes());
+                      }
+                      field.onChange(newDate);
+                    }} initialFocus />
+                    <div className="flex items-center gap-2 border-t pt-3">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      <Input 
+                        type="time" 
+                        className="h-8"
+                        value={field.value instanceof Date ? format(field.value, "HH:mm") : "00:00"}
+                        onChange={(e) => {
+                          const [hours, minutes] = e.target.value.split(':');
+                          const newDate = new Date(field.value || new Date());
+                          newDate.setHours(parseInt(hours), parseInt(minutes));
+                          field.onChange(newDate);
+                        }}
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FormMessage />
@@ -211,13 +232,34 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
                   <PopoverTrigger asChild>
                     <FormControl>
                       <Button variant="outline" className={cn("w-full pl-3 text-left font-normal", !field.value && "text-muted-foreground")}>
-                        {field.value instanceof Date ? format(field.value, "PPP") : <span>Pick a date</span>}
+                        {field.value instanceof Date ? format(field.value, "PPP p") : <span>Pick a date & time</span>}
                         <CalendarIcon className="ml-auto h-4 w-4 opacity-50" />
                       </Button>
                     </FormControl>
                   </PopoverTrigger>
-                  <PopoverContent className="w-auto p-0" align="start">
-                    <Calendar mode="single" selected={field.value} onSelect={field.onChange} initialFocus />
+                  <PopoverContent className="w-auto p-4 space-y-3" align="start">
+                    <Calendar mode="single" selected={field.value} onSelect={(date) => {
+                      if (!date) return;
+                      const newDate = new Date(date);
+                      if (field.value) {
+                        newDate.setHours(field.value.getHours(), field.value.getMinutes());
+                      }
+                      field.onChange(newDate);
+                    }} initialFocus />
+                     <div className="flex items-center gap-2 border-t pt-3">
+                      <Clock className="h-4 w-4 text-slate-400" />
+                      <Input 
+                        type="time" 
+                        className="h-8"
+                        value={field.value instanceof Date ? format(field.value, "HH:mm") : "00:00"}
+                        onChange={(e) => {
+                          const [hours, minutes] = e.target.value.split(':');
+                          const newDate = new Date(field.value || new Date());
+                          newDate.setHours(parseInt(hours), parseInt(minutes));
+                          field.onChange(newDate);
+                        }}
+                      />
+                    </div>
                   </PopoverContent>
                 </Popover>
                 <FormMessage />

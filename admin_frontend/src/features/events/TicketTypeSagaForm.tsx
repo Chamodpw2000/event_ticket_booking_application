@@ -49,12 +49,12 @@ export function TicketTypeSagaForm({ eventId, onSuccess }: TicketTypeSagaFormPro
   const form = useForm<SagaValues>({
     resolver: zodResolver(sagaSchema),
     defaultValues: {
-      name: "VIP",
-      price: "100",
-      currency: "USD",
+      name: "",
+      price: "",
+      currency: "LKR",
       description: "",
-      initialStock: "50",
-      totalQuantity: "100",
+      initialStock: "",
+      totalQuantity: "",
     },
   });
 
@@ -69,10 +69,10 @@ export function TicketTypeSagaForm({ eventId, onSuccess }: TicketTypeSagaFormPro
         initialStock: parseInt(values.initialStock),
         totalQuantity: parseInt(values.totalQuantity),
       });
-      toast.success("Saga started: Ticket type and inventory are being initialized...");
+      toast.success("Ticket added successfully!");
       onSuccess?.();
     } catch (error: any) {
-      toast.error(error.message || "Failed to start saga");
+      toast.error(error.message || "Failed to add ticket");
     }
   }
 
@@ -114,18 +114,9 @@ export function TicketTypeSagaForm({ eventId, onSuccess }: TicketTypeSagaFormPro
             render={({ field }: any) => (
               <FormItem>
                 <FormLabel>Currency</FormLabel>
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    <SelectItem value="USD">USD</SelectItem>
-                    <SelectItem value="EUR">EUR</SelectItem>
-                    <SelectItem value="GBP">GBP</SelectItem>
-                  </SelectContent>
-                </Select>
+                <FormControl>
+                  <Input {...field} readOnly className="bg-slate-50 cursor-not-allowed" />
+                </FormControl>
                 <FormMessage />
               </FormItem>
             )}
@@ -178,7 +169,7 @@ export function TicketTypeSagaForm({ eventId, onSuccess }: TicketTypeSagaFormPro
 
         <Button type="submit" className="w-full bg-slate-900" disabled={addTicketSaga.isPending}>
           {addTicketSaga.isPending && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
-          Initialize Ticket via Saga (Event + Inventory)
+          Add Ticket
         </Button>
       </form>
     </Form>

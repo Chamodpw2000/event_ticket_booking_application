@@ -2,6 +2,7 @@
 
 import { useEvents, useDeleteEvent } from "@/hooks/useEvents";
 import { AssignArtistsForm } from "./AssignArtistsForm";
+import { TicketTypeSagaForm } from "./TicketTypeSagaForm";
 import { EventDetailsSheet } from "./EventDetailsSheet";
 import { Event } from "@/api/events";
 import { 
@@ -24,7 +25,8 @@ import {
   UserPlus,
   Zap,
   Trash2,
-  Loader2
+  Loader2,
+  Ticket
 } from "lucide-react";
 import { ServiceError } from "@/components/ServiceError";
 import { 
@@ -61,6 +63,7 @@ export function EventList() {
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isTicketSagaOpen, setIsTicketSagaOpen] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
@@ -68,6 +71,11 @@ export function EventList() {
   const handleOpenAssignArtists = (eventId: number) => {
     setSelectedEventId(eventId);
     setIsAssignArtistsOpen(true);
+  };
+
+  const handleOpenTicketSaga = (eventId: number) => {
+    setSelectedEventId(eventId);
+    setIsTicketSagaOpen(true);
   };
 
   const handleOpenDetails = (event: Event) => {
@@ -193,6 +201,13 @@ export function EventList() {
                         Assign Artists
                       </DropdownMenuItem>
                       <DropdownMenuItem 
+                        className="gap-2 text-emerald-600 focus:text-emerald-600"
+                        onClick={() => handleOpenTicketSaga(event.id)}
+                      >
+                        <Ticket className="h-4 w-4" />
+                        Add Ticket Type
+                      </DropdownMenuItem>
+                      <DropdownMenuItem 
                         className="gap-2 text-red-600 focus:text-red-600"
                         onClick={() => handleOpenDelete(event)}
                       >
@@ -225,6 +240,24 @@ export function EventList() {
           )}
         </DialogContent>
       </Dialog>
+
+      <Dialog open={isTicketSagaOpen} onOpenChange={setIsTicketSagaOpen}>
+        <DialogContent className="sm:max-w-[500px]">
+          <DialogHeader>
+            <DialogTitle>Add Ticket</DialogTitle>
+            <DialogDescription>
+              Create a new ticket tier and set its initial inventory.
+            </DialogDescription>
+          </DialogHeader>
+          {selectedEventId && (
+            <TicketTypeSagaForm 
+              eventId={selectedEventId} 
+              onSuccess={() => setIsTicketSagaOpen(false)} 
+            />
+          )}
+        </DialogContent>
+      </Dialog>
+
       <EventDetailsSheet 
         event={selectedEvent} 
         open={isDetailsOpen} 
