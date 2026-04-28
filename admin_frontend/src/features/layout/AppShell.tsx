@@ -26,9 +26,16 @@ export function AppShell({ children }: { children: ReactNode }) {
   }
 
   // Public pages (login) — no sidebar/header
-  if (isPublic || !token) {
+  if (isPublic) {
     return <>{children}</>;
   }
+
+  // Not authenticated and not a public path? 
+  // Wait for AuthProvider's redirect effect to take us to /login
+  if (!token) {
+    return null;
+  }
+
 
   // Authenticated pages — full dashboard shell
   return (
