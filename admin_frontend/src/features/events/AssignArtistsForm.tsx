@@ -37,7 +37,7 @@ export function AssignArtistsForm({ eventId, onSuccess }: AssignArtistsFormProps
     try {
       await assignArtists.mutateAsync({
         eventId,
-        artistIds: selectedIds.map(id => parseInt(id))
+        artistIds: selectedIds
       });
       toast.success(`${selectedIds.length} artists linked to event!`);
       onSuccess?.();

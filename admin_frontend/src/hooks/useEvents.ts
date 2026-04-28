@@ -42,7 +42,7 @@ export function useAssignArtists() {
   const queryClient = useQueryClient();
 
   return useMutation({
-    mutationFn: ({ eventId, artistIds }: { eventId: number; artistIds: number[] }) => 
+    mutationFn: ({ eventId, artistIds }: { eventId: number; artistIds: string[] }) => 
       eventService.addArtists(eventId, artistIds),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["events"] });

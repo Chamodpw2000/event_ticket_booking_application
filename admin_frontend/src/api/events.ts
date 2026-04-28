@@ -15,7 +15,7 @@ export interface EventTicketType {
 export interface EventArtist {
   id: number;
   eventId: number;
-  artistId: number;
+  artistId: string;
   createdAt: string;
 }
 
@@ -62,7 +62,7 @@ export const eventService = {
     return response.data;
   },
 
-  addArtists: async (eventId: number, artistIds: number[]): Promise<any> => {
+  addArtists: async (eventId: number, artistIds: string[]): Promise<any> => {
     const response = await eventClient.post(`/events/${eventId}/artists`, { artistIds });
     return response.data;
   },
