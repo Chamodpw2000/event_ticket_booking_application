@@ -16,6 +16,22 @@ bun dev
 
 Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
 
+## Running Backend Services
+
+The admin frontend depends on the following backend microservices. Each service must be started separately in its own terminal. Navigate to the project root directory first, then run:
+
+| Port | Service           | Command                                  |
+|------|-------------------|------------------------------------------|
+| 3001 | Event Service     | `cd event_service && npm run dev`        |
+| 3002 | User Service      | `cd user_service && npm run dev`         |
+| 3003 | Booking Service   | `cd booking_service && npm run dev`      |
+| 3004 | Artist Service    | `cd artist_service && npm run dev`       |
+| 3005 | Venue Service     | `cd venue_service && npm run dev`        |
+| 3006 | Payment Service   | `cd payment_service && npm run dev`      |
+| 3007 | Inventory Service | `cd inventory_service && npm run dev`    |
+
+> **Note:** All backend services use `nodemon` for hot-reloading in development mode. Make sure each service's database is configured and migrated before starting.
+
 You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
 
 This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
@@ -34,3 +50,10 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+test users
+Email	        superadmin@tickety.com
+Password	    Admin@123
+
+Email           admin@tickety.com
+Password        password123

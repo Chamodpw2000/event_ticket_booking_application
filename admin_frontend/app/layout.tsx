@@ -18,11 +18,9 @@ export const metadata: Metadata = {
 };
 
 import { QueryProvider } from "@/providers/QueryProvider";
-
-import { Sidebar } from "@/features/layout/Sidebar";
-import { Header } from "@/features/layout/Header";
-import { LoadingBar } from "@/features/layout/LoadingBar";
+import { AuthProvider } from "@/providers/AuthProvider";
 import { Toaster } from "sonner";
+import { AppShell } from "@/features/layout/AppShell";
 
 export default function RootLayout({
   children,
@@ -36,17 +34,10 @@ export default function RootLayout({
     >
       <body className="min-h-full bg-slate-50 text-slate-900">
         <QueryProvider>
-          <LoadingBar />
-          <Toaster position="top-right" richColors />
-          <div className="flex min-h-screen">
-            <Sidebar />
-            <div className="flex flex-1 flex-col pl-64">
-              <Header />
-              <main className="flex-1 p-6 lg:p-8">
-                {children}
-              </main>
-            </div>
-          </div>
+          <AuthProvider>
+            <Toaster position="top-right" richColors />
+            <AppShell>{children}</AppShell>
+          </AuthProvider>
         </QueryProvider>
       </body>
     </html>
