@@ -31,7 +31,7 @@ export default async function EventDetailsPage({ params }: Readonly<PageProps>) 
             <div className="flex flex-col md:flex-row gap-8">
               {/* Poster Image */}
               <div className="w-full md:w-1/3 shrink-0">
-                <div className="aspect-[1122/1402] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60 relative">
+                <div className="aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60 relative">
                   {event.imageUrl ? (
                     <img src={event.imageUrl} alt={event.name} className="h-full w-full object-cover" />
                   ) : (

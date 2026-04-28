@@ -41,7 +41,7 @@ export default async function EventsPage({ searchParams }: Readonly<EventsPagePr
       <section className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         {events.map((item) => (
           <article key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-4 backdrop-blur-md">
-            <div className="mb-4 aspect-1122/1402 w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
+            <div className="mb-4 aspect-[9/16] w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
               {item.imageUrl ? (
                 <img src={item.imageUrl} alt={item.name} className="h-full w-full object-cover" loading="lazy" />
               ) : (
