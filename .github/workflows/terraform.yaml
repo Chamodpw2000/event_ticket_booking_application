@@ -57,33 +57,13 @@ jobs:
           terraform import aws_vpc.main vpc-05c5731d9ebd44d28 || true
 
           # Subnet
-          terraform import aws_subnet.main subnet-03670014041b3ff5 || true
+          terraform import aws_subnet.main subnet-03670014041b3ff5d || true
 
           # Internet Gateway
-          terraform import aws_internet_gateway.main $(aws ec2 describe-internet-gateways \
-            --filters "Name=attachment.vpc-id,Values=vpc-05c5731d9ebd44d28" \
-            --query "InternetGateways[0].InternetGatewayId" \
-            --output text) || true
+          terraform import aws_internet_gateway.main igw-0ae65b909d2c8a380 || true
 
           # Route Table
-          RTB_ID=$(aws ec2 describe-route-tables \
-            --filters "Name=vpc-id,Values=vpc-05c5731d9ebd44d28" \
-            --query "RouteTables[?Associations[?SubnetId=='subnet-03670014041b3ff5']].RouteTableId" \
-            --output text)
-          echo "Route Table ID: $RTB_ID"
-          if [ "$RTB_ID" != "None" ] && [ -n "$RTB_ID" ]; then
-            terraform import aws_route_table.main $RTB_ID || true
-
-            # Route Table Association
-            ASSOC_ID=$(aws ec2 describe-route-tables \
-              --route-table-ids $RTB_ID \
-              --query "RouteTables[0].Associations[?SubnetId=='subnet-03670014041b3ff5'].RouteTableAssociationId" \
-              --output text)
-            echo "Association ID: $ASSOC_ID"
-            if [ -n "$ASSOC_ID" ] && [ "$ASSOC_ID" != "None" ]; then
-              terraform import aws_route_table_association.main $ASSOC_ID || true
-            fi
-          fi
+          terraform import aws_route_table.main rtb-03ec4e15b996ff467 || true
 
           # Security Group
           terraform import aws_security_group.k8s sg-09b531e629b36564d || true
