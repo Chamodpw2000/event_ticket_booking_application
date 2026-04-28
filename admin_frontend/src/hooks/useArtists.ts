@@ -18,3 +18,14 @@ export function useCreateArtist() {
     },
   });
 }
+
+export function useDeleteArtist() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (id: string) => artistService.delete(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ["artists"] });
+    },
+  });
+}

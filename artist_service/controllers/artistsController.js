@@ -108,3 +108,40 @@ export const getArtistById = async (req, res) => {
     return res.status(500).json({ message: "Failed to fetch artist" });
   }
 };
+
+export const deleteArtist = async (req, res) => {
+  const { id } = req.params;
+
+  try {
+    const artist = await Artist.findById(id);
+
+    if (!artist) {
+      return res.status(404).json({ message: "Artist not found" });
+    }
+
+    // Extract the S3 key from the profile image URL so we can clean it up
+    if (artist.profileImageUrl) {
+      try {
+        const url = new URL(artist.profileImageUrl);
+        // pathname starts with "/" — strip it to get the raw S3 key
+        const s3Key = decodeURIComponent(url.pathname.replace(/^\//, ""));
+        if (s3Key) {
+          await deleteArtistProfileImageFromS3({ key: s3Key });
+        }
+      } catch (cleanupError) {
+        // Log but don't fail the delete if S3 cleanup errors
+        console.error("Failed to delete artist profile image from S3", cleanupError);
+      }
+    }
+
+    await Artist.findByIdAndDelete(id);
+
+    return res.status(200).json({ message: "Artist deleted successfully" });
+  } catch (error) {
+    console.error("Failed to delete artist", error);
+    if (error.name === "CastError") {
+      return res.status(400).json({ message: "Invalid artist id format" });
+    }
+    return res.status(500).json({ message: "Failed to delete artist" });
+  }
+};

@@ -23,4 +23,9 @@ export const artistService = {
     const response = await artistClient.post("/artists", data);
     return response.data;
   },
+
+  delete: async (id: string): Promise<{ message: string }> => {
+    const response = await artistClient.delete(`/artists/${id}`);
+    return response.data;
+  },
 };
