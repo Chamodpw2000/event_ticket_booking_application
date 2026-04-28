@@ -1,6 +1,6 @@
 resource "aws_security_group" "k8s" {
-  name        = "${var.project_name}-k8s-sg"
-  description = "Security group for Kubernetes cluster"
+  name        = "k8s-sg"
+  description = "k8s-node-security"
   vpc_id      = aws_vpc.main.id
 
   ingress {
@@ -8,31 +8,7 @@ resource "aws_security_group" "k8s" {
     to_port     = 22
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "SSH"
-  }
-
-  ingress {
-    from_port   = 6443
-    to_port     = 6443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "Kubernetes API"
-  }
-
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTP"
-  }
-
-  ingress {
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "HTTPS"
+    description = "SSH-access"
   }
 
   ingress {
@@ -40,23 +16,47 @@ resource "aws_security_group" "k8s" {
     to_port     = 32399
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "NGINX Ingress"
+    description = "nginx-ingress port"
   }
 
   ingress {
-    from_port   = 30000
-    to_port     = 32767
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    self        = true
+    description = "Inter-node communication"
+  }
+
+  ingress {
+    from_port   = 6443
+    to_port     = 6443
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-    description = "NodePort services"
+    self        = true
+    description = "Kubernetes API server"
   }
 
   ingress {
-    from_port = 0
-    to_port   = 0
-    protocol  = "-1"
-    self      = true
-    description = "Internal cluster communication"
+    from_port   = 10251
+    to_port     = 10252
+    protocol    = "tcp"
+    self        = true
+    description = "Scheduler & Controller"
+  }
+
+  ingress {
+    from_port   = 2379
+    to_port     = 2380
+    protocol    = "tcp"
+    self        = true
+    description = "etcd"
+  }
+
+  ingress {
+    from_port   = 10250
+    to_port     = 10250
+    protocol    = "tcp"
+    self        = true
+    description = "kubeletAPI"
   }
 
   egress {
@@ -64,11 +64,10 @@ resource "aws_security_group" "k8s" {
     to_port     = 0
     protocol    = "-1"
     cidr_blocks = ["0.0.0.0/0"]
-    description = "All outbound"
   }
 
   lifecycle {
-    ignore_changes = [ingress, egress]
+    ignore_changes = [ingress, egress, tags]
   }
 
   tags = {
