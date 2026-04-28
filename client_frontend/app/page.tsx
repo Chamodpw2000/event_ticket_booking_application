@@ -36,7 +36,7 @@ export default async function Home() {
 
             <div className="space-y-4">
               <h1 className="max-w-5xl text-4xl font-semibold tracking-tight text-white sm:text-5xl lg:text-7xl">
-                Find Your Next Live Moment in Seconds.
+                Find Your Next Live Moment in Seconds. edit
               </h1>
               <p className="max-w-4xl text-base leading-7 text-slate-300 sm:text-lg">
                 Search concerts, sports, theatre, and more. Compare availability, secure your seats,
