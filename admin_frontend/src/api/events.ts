@@ -21,7 +21,7 @@ export interface EventArtist {
 
 export interface Event {
   id: number;
-  venueId: number;
+  venueId: string;
   title: string;
   description: string | null;
   category: string | null;
@@ -65,5 +65,9 @@ export const eventService = {
   addArtists: async (eventId: number, artistIds: number[]): Promise<any> => {
     const response = await eventClient.post(`/events/${eventId}/artists`, { artistIds });
     return response.data;
+  },
+
+  delete: async (id: number): Promise<void> => {
+    await eventClient.delete(`/events/${id}`);
   },
 };

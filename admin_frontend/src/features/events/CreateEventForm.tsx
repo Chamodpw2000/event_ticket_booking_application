@@ -75,7 +75,7 @@ export function CreateEventForm({ onSuccess }: CreateEventFormProps) {
   async function onSubmit(values: FormValues) {
     try {
       await createEvent.mutateAsync({
-        venueId: parseInt(values.venueId),
+        venueId: values.venueId,
         title: values.title,
         description: values.description,
         category: values.category,

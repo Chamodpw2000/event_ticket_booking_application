@@ -1,6 +1,6 @@
 "use client";
 
-import { useEvents } from "@/hooks/useEvents";
+import { useEvents, useDeleteEvent } from "@/hooks/useEvents";
 import { AssignArtistsForm } from "./AssignArtistsForm";
 import { EventDetailsSheet } from "./EventDetailsSheet";
 import { Event } from "@/api/events";
@@ -22,7 +22,9 @@ import {
   Edit, 
   ExternalLink,
   UserPlus,
-  Zap
+  Zap,
+  Trash2,
+  Loader2
 } from "lucide-react";
 import { ServiceError } from "@/components/ServiceError";
 import { 
@@ -38,15 +40,29 @@ import {
   DialogHeader, 
   DialogTitle 
 } from "@/components/ui/dialog";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
+import { toast } from "sonner";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 
 export function EventList() {
   const { data: events, isLoading, isError } = useEvents();
+  const deleteEvent = useDeleteEvent();
   const [isAssignArtistsOpen, setIsAssignArtistsOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
   const [selectedEvent, setSelectedEvent] = useState<Event | null>(null);
   const [isDetailsOpen, setIsDetailsOpen] = useState(false);
+  const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
+  const [eventToDelete, setEventToDelete] = useState<Event | null>(null);
 
 
   const handleOpenAssignArtists = (eventId: number) => {
@@ -57,6 +73,25 @@ export function EventList() {
   const handleOpenDetails = (event: Event) => {
     setSelectedEvent(event);
     setIsDetailsOpen(true);
+  };
+
+  const handleOpenDelete = (event: Event) => {
+    setEventToDelete(event);
+    setIsDeleteDialogOpen(true);
+  };
+
+  const handleDelete = async () => {
+    if (!eventToDelete) return;
+    
+    try {
+      await deleteEvent.mutateAsync(eventToDelete.id);
+      toast.success("Event deleted successfully");
+    } catch (error: any) {
+      toast.error(error.message || "Failed to delete event");
+    } finally {
+      setIsDeleteDialogOpen(false);
+      setEventToDelete(null);
+    }
   };
 
   if (isLoading) {
@@ -157,6 +192,13 @@ export function EventList() {
                         <UserPlus className="h-4 w-4" />
                         Assign Artists
                       </DropdownMenuItem>
+                      <DropdownMenuItem 
+                        className="gap-2 text-red-600 focus:text-red-600"
+                        onClick={() => handleOpenDelete(event)}
+                      >
+                        <Trash2 className="h-4 w-4" />
+                        Delete Event
+                      </DropdownMenuItem>
                     </DropdownMenuContent>
                   </DropdownMenu>
                 </TableCell>
@@ -188,6 +230,35 @@ export function EventList() {
         open={isDetailsOpen} 
         onOpenChange={setIsDetailsOpen} 
       />
+
+      <AlertDialog open={isDeleteDialogOpen} onOpenChange={setIsDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+            <AlertDialogDescription>
+              This will permanently delete the event{" "}
+              <span className="font-semibold text-slate-900">"{eventToDelete?.title}"</span>.
+              All associated ticket types and artist assignments will be removed.
+              This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteEvent.isPending}>Cancel</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={handleDelete}
+              className="bg-red-600 hover:bg-red-700 focus:ring-red-600"
+              disabled={deleteEvent.isPending}
+            >
+              {deleteEvent.isPending ? (
+                <Loader2 className="h-4 w-4 animate-spin mr-2" />
+              ) : (
+                <Trash2 className="h-4 w-4 mr-2" />
+              )}
+              Delete Event
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
