@@ -68,7 +68,7 @@ const FALLBACK_EVENTS: HomeEventCard[] = [
     key: "fallback-1",
     name: "Neon Nights Festival",
     meta: "Electronic · Riverfront Grounds",
-    price: "From $42",
+    price: "From LKR 4,500",
     date: "Fri, Jun 14",
     location: "Colombo",
     imageUrl: null,
@@ -77,7 +77,7 @@ const FALLBACK_EVENTS: HomeEventCard[] = [
     key: "fallback-2",
     name: "Champions Derby",
     meta: "Sports · National Stadium",
-    price: "From $19",
+    price: "From LKR 2,000",
     date: "Sat, Jun 22",
     location: "Kandy",
     imageUrl: null,
@@ -86,7 +86,7 @@ const FALLBACK_EVENTS: HomeEventCard[] = [
     key: "fallback-3",
     name: "Broadway Spotlight",
     meta: "Theatre · Grand Hall",
-    price: "From $28",
+    price: "From LKR 3,500",
     date: "Sun, Jul 07",
     location: "Galle",
     imageUrl: null,
@@ -95,7 +95,7 @@ const FALLBACK_EVENTS: HomeEventCard[] = [
     key: "fallback-4",
     name: "Comedy After Dark",
     meta: "Stand-up · Blue Box Arena",
-    price: "From $16",
+    price: "From LKR 1,800",
     date: "Thu, Jul 18",
     location: "Negombo",
     imageUrl: null,
@@ -122,7 +122,7 @@ const formatPriceLabel = (event: BackendEvent) => {
   if (prices.length === 0) return "See pricing";
 
   const minPrice = Math.min(...prices);
-  return Number.isInteger(minPrice) ? `From $${minPrice}` : `From $${minPrice.toFixed(2)}`;
+  return `From LKR ${minPrice.toLocaleString()}`;
 };
 
 const mapBackendEventToCard = (event: BackendEvent): HomeEventCard => {

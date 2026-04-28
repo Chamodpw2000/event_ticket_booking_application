@@ -175,7 +175,7 @@ export function BookingPanel({
                   </div>
                   <div className="text-right">
                     <p className="text-lg font-semibold text-white">
-                      {ticket.price > 0 ? `$${ticket.price.toFixed(2)}` : "Free"}
+                      {ticket.price > 0 ? `LKR ${ticket.price.toFixed(2)}` : "Free"}
                     </p>
                   </div>
                 </div>

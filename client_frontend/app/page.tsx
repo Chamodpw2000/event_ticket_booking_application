@@ -74,7 +74,7 @@ export default async function Home() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-            {featuredEvents.map((item) => (
+            {featuredEvents.slice(0,4).map((item) => (
               <article key={item.key} className="rounded-2xl border border-white/10 bg-white/5 p-4">
                 <div className="mb-4 aspect-1122/1402 w-full overflow-hidden rounded-xl border border-white/10 bg-slate-900/60">
                   {item.imageUrl ? (
