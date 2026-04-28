@@ -799,11 +799,34 @@ jobs:
               --from-literal=secret-key=${{ secrets.ESO_AWS_SECRET_KEY }} \
               --dry-run=client -o yaml | kubectl apply -f -
           EOF
+          
+      - name: Install Metrics Server if not installed
+        run: |
+          ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
+            if ! kubectl get deployment metrics-server -n kube-system &> /dev/null; then
+              echo "Installing Metrics Server..."
+              kubectl apply -f https://github.com/kubernetes-sigs/metrics-server/releases/latest/download/components.yaml
+              
+              # Patch for AWS kubelet insecure TLS
+              kubectl patch deployment metrics-server \
+                -n kube-system \
+                --type='json' \
+                -p='[{"op": "add", "path": "/spec/template/spec/containers/0/args/-", "value": "--kubelet-insecure-tls"}]'
+              
+              # Wait for metrics server to be ready
+              kubectl rollout status deployment/metrics-server -n kube-system --timeout=120s
+              echo "Metrics Server installed"
+            else
+              echo "Metrics Server already installed - skipping"
+            fi
+          EOF
 
       - name: Apply K8s manifests
         run: |
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
             cd $HOME/k8s-manifests/k8s
+            kubectl apply -f hpa.yaml
+            kubectl apply -f pdb.yaml
             kubectl apply -f secret-store.yaml
             kubectl apply -f external-secrets.yaml
             kubectl apply -f app-config.yaml
@@ -885,7 +908,7 @@ jobs:
           ssh -i ~/.ssh/k8s-key.pem ${{ secrets.K8S_MASTER_USER }}@${{ secrets.K8S_MASTER_HOST }} << 'EOF'
             echo "=== Checking service health ==="
             sleep 60
-            
+
             services=(
               "artist-service:30004"
               "event-service:30001"
