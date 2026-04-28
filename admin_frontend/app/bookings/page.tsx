@@ -25,17 +25,7 @@ export default function BookingsPage() {
           <h1 className="text-3xl font-bold text-slate-900 tracking-tight">Booking Monitoring</h1>
           <p className="text-slate-500 mt-1">Track ticket sales, payment statuses, and transaction health.</p>
         </div>
-        <div className="flex items-center gap-3">
-          <Button 
-            variant="outline" 
-            className="gap-2 border-slate-200 text-slate-600"
-            onClick={handleCleanup}
-            disabled={expireStale.isPending}
-          >
-            {expireStale.isPending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Trash2 className="h-4 w-4" />}
-            Cleanup Stale
-          </Button>
-        </div>
+       
       </div>
 
       <div className="grid grid-cols-1 gap-6">

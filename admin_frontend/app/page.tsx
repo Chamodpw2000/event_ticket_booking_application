@@ -63,7 +63,7 @@ export default function DashboardPage() {
     },
     {
       title: "Revenue",
-      value: `$${(Array.isArray(payments) ? payments : []).reduce((acc, p) => acc + (p.status === 'PAID' ? p.amount : 0), 0).toLocaleString() || "0"}`,
+      value: `LKR ${(Array.isArray(payments) ? payments : []).reduce((acc, p) => acc + (p.status === 'PAID' ? p.amount : 0), 0).toLocaleString()}`,
       description: "Net processed volume",
       icon: CreditCard,
       color: "text-indigo-600",

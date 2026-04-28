@@ -1,6 +1,7 @@
 "use client";
 
 import { useEvents, useDeleteEvent } from "@/hooks/useEvents";
+import { useVenues } from "@/hooks/useVenues";
 import { AssignArtistsForm } from "./AssignArtistsForm";
 import { TicketTypeSagaForm } from "./TicketTypeSagaForm";
 import { EventDetailsSheet } from "./EventDetailsSheet";
@@ -58,6 +59,7 @@ import { cn } from "@/lib/utils";
 
 export function EventList() {
   const { data: events, isLoading, isError } = useEvents();
+  const { data: venues } = useVenues();
   const deleteEvent = useDeleteEvent();
   const [isAssignArtistsOpen, setIsAssignArtistsOpen] = useState(false);
   const [selectedEventId, setSelectedEventId] = useState<number | null>(null);
@@ -164,7 +166,7 @@ export function EventList() {
                 <TableCell>
                   <div className="flex items-center gap-1.5 text-slate-500">
                     <MapPin className="h-3.5 w-3.5" />
-                    <span>Venue #{event.venueId}</span>
+                    <span>{venues?.find(v => v._id === event.venueId)?.name || `Venue #${event.venueId}`}</span>
                   </div>
                 </TableCell>
                 <TableCell>

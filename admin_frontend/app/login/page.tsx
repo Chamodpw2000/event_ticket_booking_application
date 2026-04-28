@@ -2,7 +2,9 @@
 
 import { useState, FormEvent } from "react";
 import { useAuth } from "@/providers/AuthProvider";
-import { Zap, Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import { Mail, Lock, Loader2, AlertCircle, Eye, EyeOff } from "lucide-react";
+import logo from '../../public/logo.png'
+import Image from "next/image";
 
 export default function LoginPage() {
   const { login } = useAuth();
@@ -47,10 +49,16 @@ export default function LoginPage() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2.5 mb-10">
           <div className="w-10 h-10 rounded-xl bg-slate-900 flex items-center justify-center text-white shadow-lg shadow-slate-900/20">
-            <Zap className="w-6 h-6 fill-current text-blue-400" />
-          </div>
+<Image
+src={logo}
+alt="Tickety Logo"
+width={120}
+height={40}
+className="h-8 w-auto object-contain"
+priority
+/>          </div>
           <span className="font-black text-2xl tracking-tighter text-slate-900">
-            TICKETY<span className="text-blue-600 font-extrabold italic">_</span>
+            TICKETY
           </span>
         </div>
 

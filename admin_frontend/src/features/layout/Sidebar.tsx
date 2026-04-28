@@ -2,6 +2,8 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import logo from './../../../public/logo.png'
+import Image from "next/image";
 import { 
   LayoutDashboard, 
   Calendar, 
@@ -55,7 +57,7 @@ export function Sidebar() {
       <div className="flex h-16 items-center px-6">
         <Link href="/" className="flex items-center gap-2 font-black text-xl tracking-tighter text-slate-900 group">
           <div className="w-8 h-8 rounded-lg bg-slate-900 flex items-center justify-center text-white transition-transform group-hover:scale-105">
-            <Zap className="w-5 h-5 fill-current text-blue-400" />
+<Image src={logo} alt="Tickety Logo" width={120} height={40} className="h-8 w-auto object-contain" priority />
           </div>
           <span>TICKETY<span className="text-blue-600 font-extrabold italic">_</span></span>
         </Link>
