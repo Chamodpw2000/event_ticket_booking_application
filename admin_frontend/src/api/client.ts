@@ -37,13 +37,11 @@ const createClient = (baseURL: string) => {
   client.interceptors.response.use(
     (response) => response,
     (error) => {
-      // If 401, clear auth and redirect to login
+      // If 401, clear auth and redirect to login via AuthProvider/AppShell
       if (error.response?.status === 401) {
         clearAuth();
-        if (typeof window !== "undefined" && !window.location.pathname.startsWith("/login")) {
-          window.location.href = "/login";
-        }
       }
+
       const message = error.response?.data?.message || error.message || "An unexpected error occurred";
       return Promise.reject({ ...error, message });
     }

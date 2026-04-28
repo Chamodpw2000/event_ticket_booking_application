@@ -54,8 +54,15 @@ export function UserList() {
           </TableRow>
         </TableHeader>
         <TableBody>
-          {users?.map((user) => (
-            <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
+          {!users || users.length === 0 ? (
+            <TableRow>
+              <TableCell colSpan={5} className="text-center py-8 text-slate-500">
+                No users found
+              </TableCell>
+            </TableRow>
+          ) : (
+            users.map((user) => (
+              <TableRow key={user.id} className="hover:bg-slate-50/50 transition-colors">
               <TableCell>
                 <div className="flex items-center gap-3">
                   <div className="h-9 w-9 rounded-full bg-slate-100 flex items-center justify-center text-slate-600 font-bold uppercase">
@@ -115,7 +122,8 @@ export function UserList() {
                 </DropdownMenu>
               </TableCell>
             </TableRow>
-          ))}
+            ))
+          )}
         </TableBody>
       </Table>
     </Card>

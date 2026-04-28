@@ -1,5 +1,7 @@
 "use client";
 
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
 import { useEvents } from "@/hooks/useEvents";
 import { useUsers } from "@/hooks/useUsers";
 import { usePayments } from "@/hooks/usePayments";
@@ -28,6 +30,16 @@ import {
 import { Badge } from "@/components/ui/badge";
 
 export default function DashboardPage() {
+  const router = useRouter();
+  
+  // Redirect root to /admin
+  useEffect(() => {
+    const currentPath = typeof window !== "undefined" ? window.location.pathname : "";
+    if (currentPath === "/") {
+      router.push("/admin");
+    }
+  }, [router]);
+
   const { data: events } = useEvents();
   const { data: users } = useUsers();
   const { data: payments } = usePayments();

@@ -6,6 +6,7 @@ import {
   useEffect,
   useState,
   useCallback,
+  useMemo,
   ReactNode,
 } from "react";
 import { useRouter, usePathname } from "next/navigation";
@@ -47,27 +48,47 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [token, setTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
-  useEffect(() => {
+  // Sync state from storage
+  const syncAuth = useCallback(() => {
     const storedToken = getToken();
     const storedUser = getStoredUser();
 
     if (storedToken && storedUser) {
       setTokenState(storedToken);
       setUser(storedUser);
+    } else {
+      setTokenState(null);
+      setUser(null);
     }
     setIsLoading(false);
   }, []);
 
-  // Redirect logic
+  // Initial hydration
+  useEffect(() => {
+    syncAuth();
+    
+    // Listen for storage changes (logout in another tab)
+    const handleStorage = (e: StorageEvent) => {
+      if (e.key === "tickety_admin_token" || e.key === "tickety_admin_user") {
+        syncAuth();
+      }
+    };
+
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [syncAuth]);
+
+  // Redirect logic — handled via side effect to avoid render-time routing
   useEffect(() => {
     if (isLoading) return;
 
     const isPublic = PUBLIC_PATHS.some((p) => pathname.startsWith(p));
 
     if (!token && !isPublic) {
+      // Not logged in and trying to access private page
       router.replace("/login");
     } else if (token && isPublic) {
+      // Logged in and trying to access login page
       router.replace("/");
     }
   }, [isLoading, token, pathname, router]);
@@ -82,21 +103,33 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setTokenState(newToken);
       setUser(newUser);
 
-      router.replace("/");
+      // router.replace will be handled by the redirect useEffect
     },
-    [router]
+    []
   );
 
   const logout = useCallback(() => {
     clearAuth();
     setTokenState(null);
     setUser(null);
-    router.replace("/login");
-  }, [router]);
+    // router.replace will be handled by the redirect useEffect
+  }, []);
+
+  const value = useMemo(
+    () => ({
+      user,
+      token,
+      isLoading,
+      login,
+      logout,
+    }),
+    [user, token, isLoading, login, logout]
+  );
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={value}>
       {children}
     </AuthContext.Provider>
   );
 }
+
