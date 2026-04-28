@@ -1,0 +1,291 @@
+# name: Terraform Infrastructure
+
+# "on":
+#   push:
+#     branches:
+#       - dev
+#       - tiran3
+#     paths:
+#       - "terraform/**"
+#       - ".github/workflows/terraform.yml"
+#   workflow_dispatch:
+#     inputs:
+#       action:
+#         description: 'Terraform action to perform'
+#         required: true
+#         default: 'plan'
+#         type: choice
+#         options:
+#           - plan
+#           - apply
+
+# jobs:
+#   terraform:
+#     name: Terraform ${{ github.event.inputs.action || 'plan' }}
+#     runs-on: ubuntu-latest
+#     steps:
+#       - name: Checkout
+#         uses: actions/checkout@v4
+
+#       - name: Setup Terraform
+#         uses: hashicorp/setup-terraform@v3
+#         with:
+#           terraform_version: "1.10.5"
+
+#       - name: Configure AWS credentials
+#         uses: aws-actions/configure-aws-credentials@v4
+#         with:
+#           aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+#           aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+#           aws-region: ${{ secrets.TF_AWS_REGION }}
+
+#       - name: Terraform Init
+#         run: |
+#           cd terraform
+#           terraform init
+
+#       - name: Terraform Validate
+#         run: |
+#           cd terraform
+#           terraform validate
+
+#       - name: Import existing resources
+#         run: |
+#           cd terraform
+
+#           # VPC
+#           terraform import aws_vpc.main vpc-05c5731d9ebd44d28 || true
+
+#           # Subnet
+#           terraform import aws_subnet.main subnet-03670014041b3ff5d || true
+
+#           # Internet Gateway
+#           terraform import aws_internet_gateway.main igw-0ae65b909d2c8a380 || true
+
+#           # Route Table
+#           terraform import aws_route_table.main rtb-03ec4e15b996ff467 || true
+
+#           # Security Group
+#           terraform import aws_security_group.k8s sg-09b531e629b36564d || true
+
+#           # EC2 Instances
+#           terraform import aws_instance.k8s_master i-09290d124edc7c1eb || true
+#           terraform import aws_instance.k8s_worker_1 i-0c25601ad1152bc47 || true
+#           terraform import aws_instance.k8s_worker_2 i-0a3ad00c20ecd5e27 || true
+
+#           # Elastic IPs
+#           terraform import aws_eip.k8s_master eipalloc-0a2749747ead779ad || true
+#           terraform import aws_eip.k8s_worker_1 eipalloc-0ea6539cef039b211 || true
+#           terraform import aws_eip.k8s_worker_2 eipalloc-042d40cfa87a00ccb || true
+
+#       - name: Terraform Plan
+#         run: |
+#           cd terraform
+#           terraform plan -no-color -out=tfplan
+
+#       - name: Show Plan Summary
+#         run: |
+#           cd terraform
+#           echo "========================================="
+#           echo "         TERRAFORM PLAN SUMMARY"
+#           echo "========================================="
+#           terraform show -no-color tfplan
+
+#       - name: Terraform Apply
+#         if: github.event.inputs.action == 'apply'
+#         run: |
+#           cd terraform
+#           echo "========================================="
+#           echo "         APPLYING TERRAFORM CHANGES"
+#           echo "========================================="
+#           terraform apply -auto-approve tfplan
+
+name: Terraform Infrastructure
+
+
+"on":
+  push:
+    branches:
+      - dev
+    paths:
+      - "terraform/**"
+      - ".github/workflows/terraform.yml"
+  workflow_dispatch:
+    inputs:
+      action:
+        description: 'Terraform action to perform'
+        required: true
+        default: 'plan'
+        type: choice
+        options:
+          - plan
+          - apply
+
+jobs:
+  validate:
+    name: Validate Terraform
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.TF_AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Validate
+        run: |
+          cd terraform
+          terraform validate
+
+  import:
+    name: Import Existing Resources
+    runs-on: ubuntu-latest
+    needs: validate
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.TF_AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Import existing resources
+        run: |
+          cd terraform
+
+          # VPC
+          terraform import aws_vpc.main vpc-05c5731d9ebd44d28 || true
+
+          # Subnet
+          terraform import aws_subnet.main subnet-03670014041b3ff5d || true
+
+          # Internet Gateway
+          terraform import aws_internet_gateway.main igw-0ae65b909d2c8a380 || true
+
+          # Route Table
+          terraform import aws_route_table.main rtb-03ec4e15b996ff467 || true
+
+          # Security Group
+          terraform import aws_security_group.k8s sg-09b531e629b36564d || true
+
+          # EC2 Instances
+          terraform import aws_instance.k8s_master i-09290d124edc7c1eb || true
+          terraform import aws_instance.k8s_worker_1 i-0c25601ad1152bc47 || true
+          terraform import aws_instance.k8s_worker_2 i-0a3ad00c20ecd5e27 || true
+
+          # Elastic IPs
+          terraform import aws_eip.k8s_master eipalloc-0a2749747ead779ad || true
+          terraform import aws_eip.k8s_worker_1 eipalloc-0ea6539cef039b211 || true
+          terraform import aws_eip.k8s_worker_2 eipalloc-042d40cfa87a00ccb || true
+
+  plan:
+    name: Terraform Plan
+    runs-on: ubuntu-latest
+    needs: import
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.TF_AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Terraform Plan
+        run: |
+          cd terraform
+          terraform plan -no-color -out=tfplan
+
+      - name: Show Plan Summary
+        run: |
+          cd terraform
+          echo "========================================="
+          echo "         TERRAFORM PLAN SUMMARY"
+          echo "========================================="
+          terraform show -no-color tfplan
+
+      - name: Upload plan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/tfplan
+          retention-days: 1
+
+  apply:
+    name: Terraform Apply
+    runs-on: ubuntu-latest
+    needs: plan
+    if: github.event.inputs.action == 'apply'
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.10.5"
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.TF_AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.TF_AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.TF_AWS_REGION }}
+
+      - name: Terraform Init
+        run: |
+          cd terraform
+          terraform init
+
+      - name: Download plan artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: tfplan
+          path: terraform/
+
+      - name: Terraform Apply
+        run: |
+          cd terraform
+          echo "========================================="
+          echo "         APPLYING TERRAFORM CHANGES"
+          echo "========================================="
+          terraform apply -auto-approve tfplan
